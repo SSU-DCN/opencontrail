@@ -39,7 +39,7 @@ class DHCPSchedulerTestCase(test_extensions_base.ExtensionTestCase):
         plugin = mock.Mock()
         context = mock.Mock()
         resource = {'id': 'net-1'}
-        agents = [mock.Mock()]
+        agents = [mock.MagicMock()]
         tf_scheduler = dhcp_scheduler.TFIgnoreDHCPScheduler()
         mock_dhcp_filter_result(tf_scheduler.resource_filter,
                                 hostable_agents=agents)

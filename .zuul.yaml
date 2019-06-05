@@ -1,7 +1,9 @@
 ---
-# TODO(paweł_zadrożny) remove voting:false from all noc-tempest* jobs when all defects are fixed
+
+# TODO(paweł_zadrożny) remove voting:false from all noc-tempest* jobs
+# when all defects are fixed, add them as well to gate.
+
 - project:
-    name: x/networking-opencontrail
     templates:
       - build-openstack-docs-pti
       - openstack-lower-constraints-jobs-neutron
@@ -11,14 +13,6 @@
       - check-requirements
       - openstack-cover-jobs-neutron
     check:
-      jobs:
-        - noc-integration:
-            voting: false
-        - noc-tempest:
-            voting: false
-        - noc-tempest-neutron-plugin:
-            voting: false
-    gate:
       jobs:
         - noc-integration:
             voting: false

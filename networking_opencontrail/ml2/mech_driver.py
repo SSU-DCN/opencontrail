@@ -19,6 +19,7 @@ import networking_opencontrail.drivers.drv_opencontrail as drv
 from neutron_lib.plugins.ml2 import api
 
 from networking_opencontrail.l3 import snat_synchronizer
+from networking_opencontrail.ml2 import dm_integrator
 from networking_opencontrail.ml2 import opencontrail_sg_callback
 from networking_opencontrail.ml2 import subnet_dns_integrator
 
@@ -46,6 +47,8 @@ class OpenContrailMechDriver(api.MechanismDriver):
             opencontrail_sg_callback.OpenContrailSecurityGroupHandler(self))
         self.subnet_handler = (
             subnet_dns_integrator.SubnetDNSCompatibilityIntegrator(self.drv))
+        self.dm_integrator = dm_integrator.DeviceManagerIntegrator()
+        self.dm_integrator.initialize()
         LOG.info("Initialization of networking-opencontrail plugin: COMPLETE")
 
     def create_network_precommit(self, context):
@@ -130,6 +133,9 @@ class OpenContrailMechDriver(api.MechanismDriver):
             return
 
         try:
+            if self.dm_integrator.enabled:
+                self.dm_integrator.enable_vlan_tag_on_port(
+                    context._plugin_context, port)
             self.drv.create_port(context._plugin_context, port)
         except Exception:
             LOG.exception("Create Port Failed")
@@ -145,6 +151,8 @@ class OpenContrailMechDriver(api.MechanismDriver):
             return
 
         try:
+            if self.dm_integrator.enabled:
+                self.dm_integrator.add_port_binding_to_port(port)
             self.drv.update_port(context._plugin_context,
                                  port['port']['id'], port)
         except Exception:

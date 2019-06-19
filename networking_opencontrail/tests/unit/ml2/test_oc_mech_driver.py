@@ -31,10 +31,12 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
     def setUp(self):
         super(OpenContrailTestCases, self).setUp()
         self.fake_api = mock.MagicMock()
+        mech_driver.dm_integrator = mock.MagicMock()
         mech_driver.subnet_dns_integrator = mock.MagicMock()
         mech_driver.drv = mock.MagicMock()
         self.drv = mech_driver.OpenContrailMechDriver()
         self.drv.initialize()
+        self.drv.dm_integrator = mock.MagicMock(enabled=False)
 
     def tearDown(self):
         super(OpenContrailTestCases, self).tearDown()

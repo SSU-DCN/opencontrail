@@ -40,6 +40,8 @@ vnc_opts = [
                help='Key file path to connect securely to  VNC API'),
     cfg.StrOpt('cafile',
                help='CA file path to connect securely to VNC API'),
+    cfg.StrOpt('topology',
+               help='File path to yaml file with topology of baremetals'),
 ]
 
 

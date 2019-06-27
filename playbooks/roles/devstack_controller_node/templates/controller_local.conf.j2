@@ -1,7 +1,7 @@
 [[local|localrc]]
 DEST=/opt/stack
 
-HOST_IP='{{ openstack_ip }}'
+HOST_IP={{ openstack_ip }}
 SERVICE_HOST=$HOST_IP
 MULTI_HOST=False
 
@@ -34,7 +34,7 @@ Q_PLUGIN=ml2
 
 ML2_L3_PLUGIN=opencontrail-router
 
-OPENCONTRAIL_APISERVER_IP='{{ contrail_ip }}'
+OPENCONTRAIL_APISERVER_IP={{ contrail_ip }}
 OPENCONTRAIL_APISERVER_PORT=8082
 
 NOVNCPROXY_URL="http://{{ hostvars['controller'].ansible_host }}:6080/vnc_auto.html"
@@ -48,7 +48,7 @@ Q_ML2_PLUGIN_MECHANISM_DRIVERS=opencontrail
 
 [[post-config|$NEUTRON_CORE_PLUGIN_CONF]]
 [ml2]
-type_drivers = local,vlan,gre
+type_drivers = local,vlan,gre,vxlan
 tenant_network_types = local,vlan
 mechanism_drivers = opencontrail
 extension_drivers = port_security

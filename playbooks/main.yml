@@ -3,6 +3,6 @@
 - include: change_password.yml
 - include: fix_docker_bip.yml
 - include: setup_nodes.yml
-- hosts: controller
+- hosts: contrail_controller
   roles:
     - synchronize_projects

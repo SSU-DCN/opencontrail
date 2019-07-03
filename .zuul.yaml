@@ -3,6 +3,10 @@
 # TODO(paweł_zadrożny) remove voting:false from all noc-tempest* jobs
 # when all defects are fixed, add them as well to gate.
 
+# TODO(kamil_mankowski) reenable votable check-requirements
+# when contrail-api-client will be in OpenStack global requirements list.
+# Details: https://docs.openstack.org/project-team-guide/dependency-management.html
+
 - project:
     templates:
       - build-openstack-docs-pti
@@ -10,7 +14,7 @@
       - openstack-python-jobs-neutron
       - openstack-python35-jobs-neutron
       - openstack-python36-jobs-neutron
-      - check-requirements
+      # - check-requirements
       - openstack-cover-jobs-neutron
     check:
       jobs:
@@ -19,6 +23,8 @@
         - noc-tempest:
             voting: false
         - noc-tempest-neutron-plugin:
+            voting: false
+        - requirements-check:
             voting: false
     periodic:
       jobs:

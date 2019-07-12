@@ -31,12 +31,14 @@ def synchronize_project(contrail_api, project_id):
     print(message)
 
 
-if len(sys.argv) > 1:
+if len(sys.argv) > 2:
     controller_ip = sys.argv[1]
+    contrail_ip = sys.argv[2]
 else:
     controller_ip = os.getenv('CONTROLLER_IP', 'localhost')
+    contrail_ip = controller_ip
 
-contrail_api = 'http://{}:8082'.format(controller_ip)
+contrail_api = 'http://{}:8082'.format(contrail_ip)
 auth_url = 'http://{}/identity/v3'.format(controller_ip)
 
 auth = identity.V3Password(auth_url=auth_url,

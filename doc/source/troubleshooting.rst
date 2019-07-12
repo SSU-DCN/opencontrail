@@ -17,3 +17,13 @@ Troubleshooting
     [ml2]
     tenant_network_types = local,vlan
 
+#. **Fix problems with libvirt during devstack deployment**
+
+   If there are any problems with libvirt, then the version of libvirt
+   should be upgraded in devstack requirements. To do it, change
+   version of `libvirt-python` in file `/opt/stack/requirements/upper-constraints.txt`
+
+   The version of libvirt-python must be the same as, or newer than the
+   version of the libvirt C library you're building against.
+
+   Reference: https://www.redhat.com/archives/libvirt-users/2017-September/msg00003.html

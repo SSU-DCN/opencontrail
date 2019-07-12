@@ -8,6 +8,7 @@ Installation of package depends on the environment you are running. The most gen
       -c https://git.openstack.org/cgit/openstack/requirements/plain/upper-constraints.txt \
       -e git+https://git.openstack.org/openstack/networking-opencontrail#egg=networking-opencontrail
 
+.. note:: If you only need a development environment, see :doc:`installation/playbooks`.
 
 DevStack environment
 --------------------

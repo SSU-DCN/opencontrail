@@ -1,6 +1,6 @@
 ---
 - name: optionally unstack
-  shell: ./unstack.sh
+  shell: PATH="/usr/sbin:$PATH" ./unstack.sh
   args:
     chdir: ~/devstack
   ignore_errors: yes

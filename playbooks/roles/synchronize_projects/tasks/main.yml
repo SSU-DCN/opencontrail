@@ -12,11 +12,12 @@
   shell: |
       docker ps --filter "label=net.juniper.contrail.container.name=contrail-controller-config-api" --format {{' "{{.Names}}" '}}
 - name: Restart contrail config api
+  become: yes
   shell: |
       docker restart "{{ contrail_config_api_docker_name.stdout }}"
 - name: Wait for Contrail API to come up
   uri:
-    url: "http://{{ hostvars['contrail_controller'].ansible_host }}:8082/projects"
+    url: "http://{{ contrail_ip }}:8082/projects"
     status_code:
     - 200
     - 304
@@ -26,7 +27,7 @@
   retries: 30
   delay: 5
 - name: Synchronize projects
-  script: sync_projects.py {{ hostvars['contrail_controller'].ansible_host }}
+  script: sync_projects.py {{ openstack_ip }} {{ contrail_ip }}
   register: sync_result
 - name: Print project synchronization status
   debug:

@@ -148,7 +148,7 @@
               quota_security_group_rule: -1
           $NEUTRON_CORE_PLUGIN_CONF:
             ml2:
-              type_drivers: vlan,local,gre
+              type_drivers: vlan,local,gre,vxlan
               tenant_network_types: vlan,local
               extension_drivers: port_security
               mechanism_drivers: opencontrail,openvswitch,linuxbridge

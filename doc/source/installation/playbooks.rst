@@ -2,11 +2,12 @@
 Setup development VMs
 =====================
 
-Playbooks are designed to setup two nodes. The first node
-contains OpenStack with, keystone, neutron, horizon, etc.
+Repository contains Ansible playbooks to automate creating development
+environment. They are designed to setup two nodes. The first node
+contains OpenStack with keystone, neutron, horizon, etc.
 It has also networking-opencontrail plugin as neutron ML2 plugin
-and service plugin for L3 driver.
-A second node contains nightly-build contrail node with simple devstack as compute node.
+and service plugin for L3 driver. A second node contains nightly-build
+contrail node with simple devstack as compute node.
 
 Playbooks deploy OpenStack in master version and OpenContrail in one of the latest nightly build.
 
@@ -45,6 +46,11 @@ Let's assume there are two hosts:
     $ ssh 10.100.0.2
     $ ssh 10.100.0.3
 
+.. important::
+
+    The SSH access must be available also between compute and controller hosts.
+
+
 **3. Install Ansible on your host**
 
 It is required to install Ansible in version 2.5 or higher.
@@ -70,8 +76,16 @@ Change ``contrail-node`` and ``openstack-node`` to public IP of your machines.
 
     controller ansible_host=10.100.0.3 ansible_user=ubuntu
 
+    # This host should be one from the compute host group.
+    # Playbooks are not prepared to deploy tungsten fabric compute node separately.
+    contrail_controller ansible_host=10.100.0.2 ansible_user=centos
+
     [compute]
     10.100.0.2 ansible_user=centos
+
+The ``controller`` host is a machine to install OpenStack controller.
+On ``contrail_controller``, the OpenConrail will be installed. All hosts
+from the ``compute`` group will be a OpenStack computes.
 
 **2. Change deployment variables in playbooks/group_vars/all.yml**
 
@@ -81,6 +95,15 @@ Change ``contrail-node`` and ``openstack-node`` to public IP of your machines.
 
 * ``openstack_branch`` should be set to ``master``
 * ``install_networking_bgpvpn_plugin`` is a boolean value. If set true, it will install the neutron_bgpvpn plugin.
+
+Last variables provide some useful options to configure VMs:
+
+* ``change_password`` is a boolean value. If set true, the password on
+  every machine (for user used by ansible) will be set to password given
+  in ``instance_password`` variable.
+* ``fix_docker_bip`` is a boolean value. If set true, the docker bridge CIDR
+  will be set to value given in ``bip_cidr`` variable. This is for case, when
+  default Docker bip can conflict with others.
 
 .. code-block:: yaml
 
@@ -103,6 +126,16 @@ Change ``contrail-node`` and ``openstack-node`` to public IP of your machines.
     # If true, then install networking_bgpvpn plugin with contrail driver
     install_networking_bgpvpn_plugin: false
 
+    # If true, password to the created instances for current ansible user
+    # will be set to value of instance_password
+    change_password: false
+    instance_password: uberpass1
+
+    # Set to true if you have conflict between docker network subnet and your local
+    # network subnet. The docker bridge CIDR will be set to value of bip_cidr
+    fix_docker_bip: false
+    bip_cidr: 10.255.0.1/16
+
 **********
 Deployment
 **********
@@ -119,12 +152,13 @@ This will make Ansible to use local ``hosts`` file instead of system broad defin
 .. code-block:: console
 
     $ cd playbooks
-    $ ./main.yml
+    $ ansible-playbook main.yml -i hosts
 
 This playbooks can last 1 hour or more.
 
-Please be patient while executing roles with ``stack.sh``. Real time logs from these operations can be viewed on each host by following command:
-``less -R /opt/stack/logs/stack.sh.log``
+Please be patient while executing roles with ``stack.sh``.
+Real time logs from these operations can be viewed on each host
+by following command: ``less +F -R /opt/stack/logs/stack.sh.log``
 
 *****
 Usage

@@ -21,8 +21,12 @@ contrail_version: latest
 # If true, then install networking_bgpvpn plugin with contrail driver
 install_networking_bgpvpn_plugin: false
 
-# If true, password to the created instances will be set to 'uberpass1'
+# If true, password to the created instances for current ansible user
+# will be set to value of instance_password
 change_password: false
+instance_password: uberpass1
 
-# Set to true if you have conflict between docker network subnet and your local network subnet
+# Set to true if you have conflict between docker network subnet and your local
+# network subnet. The docker bridge CIDR will be set to value of bip_cidr
 fix_docker_bip: false
+bip_cidr: 10.255.0.1/16

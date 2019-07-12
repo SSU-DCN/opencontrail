@@ -28,7 +28,7 @@ GLANCE_HOSTPORT=$SERVICE_HOST:9292
 ENABLED_SERVICES=n-cpu,q-agt,n-api-meta,placement-client,q-dhcp
 
 NOVA_VNC_ENABLED=True
-NOVNCPROXY_URL="http://{{ hostvars['controller'].ansible_host }}:6080/vnc_auto.html"
+NOVNCPROXY_URL="http://{{ hostvars['controller'].ansible_host }}:6080/vnc_lite.html"
 VNCSERVER_LISTEN=$HOST_IP
 VNCSERVER_PROXYCLIENT_ADDRESS=$VNCSERVER_LISTEN
 

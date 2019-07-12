@@ -128,7 +128,15 @@
   shell: |
     docker ps --filter "label=net.juniper.contrail.container.name=contrail-vrouter-agent" --format {{' "{{.Names}}" '}}
 
-- name: Copy vrouter
+- name: Copy vrouter-port-control
   become: yes
   shell: |
     docker cp {{ vrouter_docker_name.stdout }}:/usr/bin/vrouter-port-control /usr/bin/
+
+- name: Install contrail-nova-vif-driver
+  become: yes
+  pip:
+    name:
+      - git+https://github.com/Juniper/contrail-controller.git#subdirectory=src/vnsw/contrail-vrouter-api/
+      - git+https://github.com/Juniper/contrail-nova-vif-driver.git
+

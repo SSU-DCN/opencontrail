@@ -25,7 +25,7 @@ NEUTRON_BRANCH=$USE_BRANCH
 LOG_COLOR=True
 USE_SCREEN=True
 
-disable_service n-net c-sch c-api c-vol dstat tempest
+disable_service n-cpu n-net c-sch c-api c-vol dstat tempest
 
 NEUTRON_CREATE_INITIAL_NETWORKS=False
 
@@ -37,7 +37,7 @@ ML2_L3_PLUGIN=opencontrail-router
 OPENCONTRAIL_APISERVER_IP={{ contrail_ip }}
 OPENCONTRAIL_APISERVER_PORT=8082
 
-NOVNCPROXY_URL="http://{{ hostvars['controller'].ansible_host }}:6080/vnc_auto.html"
+NOVNCPROXY_URL="http://{{ hostvars['controller'].ansible_host }}:6080/vnc_lite.html"
 
 enable_plugin networking-opencontrail https://git.openstack.org/openstack/networking-opencontrail $USE_BRANCH
 

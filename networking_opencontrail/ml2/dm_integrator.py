@@ -96,10 +96,9 @@ class DeviceManagerIntegrator(object):
             pi_details = self.tf_rest_driver.get_resource('physical-interface',
                                                           None,
                                                           pi_uuid)[1]
+            # TODO(kamman): select first auto-generated VPG
             if 'virtual_port_group_back_refs' in pi_details[
-                'physical-interface'] and len(
-                    pi_details['physical-interface'][
-                        'virtual_port_group_back_refs']) == 1:
+                'physical-interface']:
                 return pi_details['physical-interface'][
                     'virtual_port_group_back_refs'][0]['to'][-1]
         return None

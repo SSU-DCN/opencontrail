@@ -208,6 +208,26 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
 
         mech_driver.drv.assert_has_calls(expected_calls)
 
+    def test_delete_port_when_dm_enabled(self):
+        self.drv.dm_integrator.enabled = True
+        network_id = 'test_net1'
+        tenant_id = 'ten-1'
+        port_id = 'port-1'
+
+        port_context, port = self.get_port_context(tenant_id, network_id,
+                                                   port_id)
+        self.drv.delete_port_postcommit(port_context)
+
+        expected_calls = [
+            mock.call.OpenContrailDrivers(),
+            mock.call.OpenContrailDrivers().delete_port(
+                port_context._plugin_context, port_id),
+        ]
+
+        mech_driver.drv.assert_has_calls(expected_calls)
+        self.drv.dm_integrator.delete_vlan_tagging_for_port.assert_called_with(
+            port['port'])
+
     def test_update_port(self):
         network_id = 'test_net1'
         tenant_id = 'ten-1'
@@ -236,6 +256,38 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
                 port_context._plugin_context, port_id, port))
 
         mech_driver.drv.assert_has_calls(expected_calls)
+
+    def test_update_port_when_dm_enabled(self):
+        self.drv.dm_integrator.enabled = True
+        network_id = 'test_net1'
+        tenant_id = 'ten-1'
+        port_id = 'port-1'
+        port_name = 'first-port'
+
+        port_context, port = self.get_port_context(tenant_id, network_id,
+                                                   port_id, port_name)
+        self.drv.create_port_postcommit(port_context)
+
+        expected_calls = [
+            mock.call.OpenContrailDrivers(),
+            mock.call.OpenContrailDrivers().create_port(
+                port_context._plugin_context, port)
+        ]
+
+        # Chnage the port properties
+        port_name = 'second-port'
+
+        port_context, port = self.get_port_context(tenant_id, network_id,
+                                                   port_id, port_name)
+        self.drv.update_port_postcommit(port_context)
+
+        expected_calls.append(
+            mock.call.OpenContrailDrivers().update_port(
+                port_context._plugin_context, port_id, port))
+
+        mech_driver.drv.assert_has_calls(expected_calls)
+        self.drv.dm_integrator.create_vlan_tagging_for_port.assert_called_with(
+            port_context._plugin_context, port)
 
     def test_create_port_omit_callback(self):
         network_id = 'test_net1'

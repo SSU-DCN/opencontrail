@@ -133,9 +133,6 @@ class OpenContrailMechDriver(api.MechanismDriver):
             return
 
         try:
-            if self.dm_integrator.enabled:
-                self.dm_integrator.enable_vlan_tag_on_port(
-                    context._plugin_context, port)
             self.drv.create_port(context._plugin_context, port)
         except Exception:
             LOG.exception("Create Port Failed")
@@ -151,10 +148,11 @@ class OpenContrailMechDriver(api.MechanismDriver):
             return
 
         try:
-            if self.dm_integrator.enabled:
-                self.dm_integrator.add_port_binding_to_port(port)
             self.drv.update_port(context._plugin_context,
                                  port['port']['id'], port)
+            if self.dm_integrator.enabled:
+                self.dm_integrator.create_vlan_tagging_for_port(
+                    context._plugin_context, port)
         except Exception:
             LOG.exception("Update port Failed")
 
@@ -170,6 +168,8 @@ class OpenContrailMechDriver(api.MechanismDriver):
 
         try:
             self.drv.delete_port(context._plugin_context, port['id'])
+            if self.dm_integrator.enabled:
+                self.dm_integrator.delete_vlan_tagging_for_port(port)
         except Exception:
             LOG.exception("Delete Port Failed")
 

@@ -13,10 +13,13 @@
 #    under the License.
 #
 
+import json
+import uuid
+
 from neutron_lib.plugins import directory
 from oslo_log import log as logging
 
-from networking_opencontrail.drivers.rest_driver import ContrailRestApiDriver
+from networking_opencontrail.drivers.vnc_api_driver import VncApiClient
 from networking_opencontrail.ml2.dm_topology_loader import DmTopologyLoader
 
 LOG = logging.getLogger(__name__)
@@ -33,75 +36,135 @@ class DeviceManagerIntegrator(object):
     """
 
     def __init__(self):
-        self.tf_rest_driver = ContrailRestApiDriver()
+        self.tf_client = VncApiClient()
         self.topology_loader = DmTopologyLoader()
 
     def initialize(self):
         self.topology = self.topology_loader.load()
 
-    def enable_vlan_tag_on_port(self, context, port):
+    def create_vlan_tagging_for_port(self, context, port):
+        node = self._get_node_for_port(port['port'])
+        device_id = port['port'].get('device_id', '')
+        if not node or not device_id:
+            host_id = port['port'].get('binding:host_id', '')
+            LOG.debug("Compute '%s' is not managed by Device Manager or no "
+                      "connected VM. Binding for DM skipped. " % (host_id))
+            return
+
         network_id = port['port']['network_id']
-        network = self._core_plugin.get_network(context, network_id)
-        vlan_tag = network['provider:segmentation_id']
-        vlan_tag_dict = {'sub_interface_vlan_tag': vlan_tag}
+        vlan_tag = self._get_vlan_tag(context, network_id)
+        if not vlan_tag:
+            LOG.debug("No VLAN tag for port, binding for DM skipped.")
+            return
 
-        port['port']['virtual_machine_interface_properties'] = vlan_tag_dict
-        port['port']['binding:vnic_type'] = DM_MANAGED_VNIC_TYPE
+        tf_project = self.tf_client.get_project(
+            str(uuid.UUID(port['port']['tenant_id'])))
+        vmi_name = self._make_vmi_name(port['port'])
+        existing_vmi = self.tf_client.get_virtual_machine_interface(
+            fq_name=tf_project.fq_name + [vmi_name])
 
-    def add_port_binding_to_port(self, port):
-        bindings = self._get_bindings(port)
-        port['port'].update(bindings)
+        if existing_vmi:
+            LOG.debug("VMI with bindings for DM exists, creating skipped.")
+            return
 
-    def _get_bindings(self, port):
-        if 'binding:host_id' not in port['port']:
-            return {}
-        host_id = port['port']['binding:host_id']
+        tf_vn = self.tf_client.get_virtual_network(network_id)
+        if not tf_vn:
+            LOG.error("Virtual Network '%s' not exists in TF." % network_id)
+            return
+
+        properties = self.tf_client.make_vmi_properties_with_vlan_tag(vlan_tag)
+        bindings = self._get_bindings(port, node)
+        vmi = self.tf_client.make_virtual_machine_interface(
+            vmi_name, tf_vn, properties, bindings, tf_project)
+
+        self.tf_client.create_virtual_machine_interface(vmi)
+        LOG.debug("Created VMI with bindings for DM for port %s",
+                  port['port']['id'])
+
+    def delete_vlan_tagging_for_port(self, port):
+        node = self._get_node_for_port(port)
+        device_id = port.get('device_id', '')
+        if not node or not device_id:
+            return
+
+        tf_project = self.tf_client.get_project(
+            str(uuid.UUID(port['tenant_id'])))
+        vmi_name = self._make_vmi_name(port)
+        vmi_fq_name = tf_project.fq_name + [vmi_name]
+        existing_vmi = self.tf_client.get_virtual_machine_interface(
+            fq_name=vmi_fq_name)
+
+        if existing_vmi:
+            self._detach_vmi_from_vpg(existing_vmi)
+            self.tf_client.delete_virtual_machine_interface(
+                fq_name=vmi_fq_name)
+            LOG.debug("Deleted VMI with bindings for DM for port %s" %
+                      port['id'])
+
+    def _detach_vmi_from_vpg(self, vmi):
+        vpg_refs = vmi.get_virtual_port_group_back_refs()
+        if not vpg_refs:
+            return
+        vpg = self.tf_client.get_virtual_port_group(vpg_refs[0]['uuid'])
+        vpg.del_virtual_machine_interface(vmi)
+        self.tf_client.update_virtual_port_group(vpg)
+
+    def _get_node_for_port(self, port):
+        if 'binding:host_id' not in port:
+            return None
+        host_id = port['binding:host_id']
         nodes = [n for n in self.topology['nodes'] if n['name'] == host_id]
         if len(nodes) == 1:
-            node_port = nodes[0]['ports'][0]
-            profile = {
-                'port_id': node_port['port_name'],
-                'switch_id': node_port['switch_id'],
-                'switch_info': node_port['switch_name'],
-                'fabric': node_port['fabric'],
-            }
-            binding = {
-                'binding:profile': {'local_link_information': [profile]},
-                'binding:vnic_type': DM_MANAGED_VNIC_TYPE
-            }
+            return nodes[0]
+        if len(nodes) > 1:
+            LOG.error("For host '%s' there is more than one matched nodes." %
+                      host_id)
+        return None
 
-            vpg = self._find_existing_vpg(node_port['switch_name'],
-                                          node_port['port_name'])
-            if vpg:
-                binding.update({'binding:vpg': vpg})
+    def _get_vlan_tag(self, context, network_id):
+        network = self._core_plugin.get_network(context, network_id)
+        vlan_tag = network.get('provider:segmentation_id', 0)
+        network_type = network.get('provider:network_type', '')
 
-            return binding
-        else:
-            LOG.info("Compute '%s' is not managed by Device Manager. "
-                     "Binding for DM skipped. " % (host_id))
-            return {}
+        if network_type == 'vlan' and (0 < vlan_tag < 4095):
+            return vlan_tag
+        return None
+
+    def _get_bindings(self, port, node):
+        node_port = node['ports'][0]
+        profile = {'local_link_information': [{
+            'port_id': node_port['port_name'],
+            'switch_id': node_port['switch_id'],
+            'switch_info': node_port['switch_name'],
+            'fabric': node_port['fabric'],
+        }]}
+        bindings_list = [('profile', json.dumps(profile)),
+                         ('vnic_type', DM_MANAGED_VNIC_TYPE)]
+
+        vpg = self._find_existing_vpg(node_port['switch_name'],
+                                      node_port['port_name'])
+        if vpg:
+            bindings_list.append(('vpg', vpg))
+
+        return self.tf_client.make_key_value_pairs(bindings_list)
 
     def _find_existing_vpg(self, switch_node, port_node):
-        request_query = {
-            'parent_fq_name_str': '%s:%s' % (
-                "default-global-system-config", switch_node)}
-        physical_interfaces = \
-            self.tf_rest_driver.list_resource('physical-interface',
-                                              request_query)[1]
-        pi = [pi for pi in physical_interfaces['physical-interfaces']
-              if pi['fq_name'][-1] == port_node]
-
-        if len(pi) == 1:
-            pi_uuid = pi[0]['uuid']
-            pi_details = self.tf_rest_driver.get_resource('physical-interface',
-                                                          None,
-                                                          pi_uuid)[1]
-            # TODO(kamman): select first auto-generated VPG
-            if 'virtual_port_group_back_refs' in pi_details[
-                'physical-interface']:
-                return pi_details['physical-interface'][
-                    'virtual_port_group_back_refs'][0]['to'][-1]
+        pi = self.tf_client.read_pi_from_switch(switch_node, port_node)
+        if pi:
+            vpg_refs = pi.get_virtual_port_group_back_refs() or []
+            for vpg_ref in vpg_refs:
+                vpg = self.tf_client.get_virtual_port_group(
+                    uuid=vpg_ref['uuid'])
+                if not vpg.get_virtual_port_group_user_created():
+                    return vpg.fq_name[-1]
         return None
+
+    @staticmethod
+    def _make_vmi_name(port):
+        network_id = port['network_id']
+        device_id = port['device_id']
+        vmi_name = "_vlan_tag_for_vm_%s_vn_%s" % (device_id, network_id)
+        return vmi_name
 
     @property
     def enabled(self):

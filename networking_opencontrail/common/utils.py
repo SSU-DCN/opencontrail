@@ -39,15 +39,24 @@ vnc_opts = [
     cfg.StrOpt('keyfile',
                help='Key file path to connect securely to  VNC API'),
     cfg.StrOpt('cafile',
-               help='CA file path to connect securely to VNC API'),
+               help='CA file path to connect securely to VNC API')
+]
+
+dm_integration_opts = [
+    cfg.BoolOpt('enabled',
+                default=False,
+                help='Enable integration with Device Manager to automate '
+                'VLAN configuration on switches'),
     cfg.StrOpt('topology',
-               help='File path to yaml file with topology of baremetals'),
+               help='File path to yaml file with topology of baremetals '
+               'used by DM integration'),
 ]
 
 
 def register_vnc_api_options():
     """Register Contrail Neutron core plugin configuration flags"""
     cfg.CONF.register_opts(vnc_opts, 'APISERVER')
+    cfg.CONF.register_opts(dm_integration_opts, 'DM_INTEGRATION')
 
 
 def vnc_api_is_authenticated():

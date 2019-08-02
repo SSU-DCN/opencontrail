@@ -17,6 +17,7 @@ import json
 import uuid
 
 from neutron_lib.plugins import directory
+from oslo_config import cfg
 from oslo_log import log as logging
 
 from networking_opencontrail.drivers.vnc_api_driver import VncApiClient
@@ -40,7 +41,9 @@ class DeviceManagerIntegrator(object):
         self.topology_loader = DmTopologyLoader()
 
     def initialize(self):
-        self.topology = self.topology_loader.load()
+        self.topology = {}
+        if self.enabled:
+            self.topology = self.topology_loader.load()
 
     def create_vlan_tagging_for_port(self, context, port):
         node = self._get_node_for_port(port['port'])
@@ -176,7 +179,7 @@ class DeviceManagerIntegrator(object):
 
     @property
     def enabled(self):
-        return not self.topology == {}
+        return cfg.CONF.DM_INTEGRATION.enabled
 
     @property
     def _core_plugin(self):

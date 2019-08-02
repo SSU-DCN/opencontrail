@@ -41,7 +41,11 @@ class UtilsTestCases(test_extensions_base.ExtensionTestCase):
     def test_register_vnc_api_options(self, register):
         utils.register_vnc_api_options()
 
-        register.assert_called_with(mock.ANY, 'APISERVER')
+        expected_calls = [
+            mock.call(mock.ANY, 'APISERVER'),
+            mock.call(mock.ANY, 'DM_INTEGRATION')
+        ]
+        register.assert_has_calls(expected_calls)
 
     @mock.patch("requests.get")
     @mock.patch("oslo_config.cfg.CONF")

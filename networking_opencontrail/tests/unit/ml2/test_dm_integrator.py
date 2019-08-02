@@ -28,7 +28,7 @@ from networking_opencontrail.tests import base
 @ddt.ddt
 class DeviceManagerIntegratorTestCase(base.TestCase):
     @mock.patch("oslo_config.cfg.CONF",
-                APISERVER=mock.MagicMock(topology=None))
+                DM_INTEGRATION=mock.MagicMock(enabled=True))
     def setUp(self, config):
         super(DeviceManagerIntegratorTestCase, self).setUp()
         dm_integrator.directory.get_plugin = mock.Mock()
@@ -44,6 +44,39 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
 
     def tearDown(self):
         super(DeviceManagerIntegratorTestCase, self).tearDown()
+
+    def test_enabled_when_config_set(self):
+        with mock.patch("oslo_config.cfg.CONF",
+                        DM_INTEGRATION=mock.MagicMock(enabled=True)):
+            self.assertEqual(self.dm_integrator.enabled, True)
+
+        with mock.patch("oslo_config.cfg.CONF",
+                        DM_INTEGRATION=mock.MagicMock(enabled=False)):
+            self.assertEqual(self.dm_integrator.enabled, False)
+
+    @mock.patch("oslo_config.cfg.CONF",
+                DM_INTEGRATION=mock.MagicMock(enabled=False))
+    @mock.patch("networking_opencontrail.ml2.dm_integrator"
+                ".DmTopologyLoader")
+    def test_topology_is_not_loaded_when_disabled(self, loader, conf):
+        integrator = dm_integrator.DeviceManagerIntegrator()
+
+        integrator.initialize()
+
+        loader().load.assert_not_called()
+
+    @mock.patch("oslo_config.cfg.CONF",
+                DM_INTEGRATION=mock.MagicMock(enabled=True))
+    @mock.patch("networking_opencontrail.ml2.dm_integrator"
+                ".DmTopologyLoader")
+    def test_topology_is_loaded_on_initializing(self, loader, conf):
+        topology = mock.Mock()
+        loader().load = mock.Mock(return_value=topology)
+        integrator = dm_integrator.DeviceManagerIntegrator()
+
+        integrator.initialize()
+
+        self.assertEqual(integrator.topology, topology)
 
     @mock.patch("oslo_config.cfg.CONF")
     def test_topology_should_be_validated_on_initializing(self, _):

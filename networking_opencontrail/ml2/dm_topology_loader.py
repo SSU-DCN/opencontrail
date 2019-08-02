@@ -23,12 +23,12 @@ import yaml
 class DmTopologyLoader(object):
 
     def load(self):
-        if cfg.CONF.APISERVER.topology:
-            topology = self._load_yaml_file(cfg.CONF.APISERVER.topology)
+        if cfg.CONF.DM_INTEGRATION.topology:
+            topology = self._load_yaml_file(cfg.CONF.DM_INTEGRATION.topology)
             self.validate(topology)
             return topology
         else:
-            return {}
+            raise NoTopologyFileError
 
     def validate(self, config):
         """Validates config. Expected format is dict.
@@ -91,4 +91,8 @@ class DmTopologyLoader(object):
 
 
 class ConfigInvalidFormat(Exception):
+    pass
+
+
+class NoTopologyFileError(Exception):
     pass

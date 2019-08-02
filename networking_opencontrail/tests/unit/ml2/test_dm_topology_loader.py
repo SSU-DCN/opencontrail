@@ -17,6 +17,7 @@ import mock
 
 from networking_opencontrail.ml2 import dm_topology_loader
 from networking_opencontrail.ml2.dm_topology_loader import ConfigInvalidFormat
+from networking_opencontrail.ml2.dm_topology_loader import NoTopologyFileError
 from networking_opencontrail.tests import base
 
 
@@ -31,7 +32,7 @@ def _get_topology():
 class TestDmTopologyLoader(base.TestCase):
 
     @mock.patch("oslo_config.cfg.CONF",
-                APISERVER=mock.MagicMock(topology=None))
+                DM_INTEGRATION=mock.MagicMock(topology=None))
     def setUp(self, conf):
         super(TestDmTopologyLoader, self).setUp()
         self.dm_topology_loader = dm_topology_loader.DmTopologyLoader()
@@ -64,7 +65,14 @@ class TestDmTopologyLoader(base.TestCase):
 
     @mock.patch("oslo_config.cfg.CONF")
     def test_no_file_should_raise_exception(self, config):
-        config.APISERVER = mock.Mock()
-        config.APISERVER.topology = '/file_does_not_exist'
+        config.DM_INTEGRATION = mock.Mock()
+        config.DM_INTEGRATION.topology = '/file_does_not_exist'
 
         self.assertRaises(IOError, self.dm_topology_loader.load)
+
+    @mock.patch("oslo_config.cfg.CONF")
+    def test_no_file_path_should_raise_exception(self, config):
+        config.DM_INTEGRATION = mock.Mock()
+        config.DM_INTEGRATION.topology = None
+
+        self.assertRaises(NoTopologyFileError, self.dm_topology_loader.load)

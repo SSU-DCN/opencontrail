@@ -55,6 +55,7 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
     def test_create_tagging_for_port_first_in_vpg(self, vlan_tag):
         self._mock_core_get_network(segmentation_id=vlan_tag)
         self._mock_tf_client_when_no_vpg()
+        self._mock_tf_client_read_fabric_name()
         self._mock_tf_client_get_vmi(None)
         tf_project = self._mock_tf_client_get_project()
         tf_vn = self._mock_tf_client_get_vn()
@@ -76,7 +77,7 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
                                     [{'port_id': 'xe-0/0/1',
                                       'switch_id': 'mac-address',
                                       'switch_info': 'leaf1',
-                                      'fabric': 'fab01'}]}
+                                      'fabric': 'fabric-1'}]}
         expected_bindings = [('profile', json.dumps(expected_binding_profile)),
                              ('vnic_type', 'baremetal')]
         tf_expected_calls = [
@@ -86,6 +87,7 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
                 fq_name=tf_project.fq_name + [expected_vmi_name]),
             mock.call.get_virtual_network("net-1"),
             mock.call.make_vmi_properties_with_vlan_tag(vlan_tag),
+            mock.call.read_fabric_name_from_switch("leaf1"),
             mock.call.read_pi_from_switch("leaf1", "xe-0/0/1"),
             mock.call.make_key_value_pairs(expected_bindings),
             mock.call.make_virtual_machine_interface(
@@ -100,6 +102,7 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
         """Don't connect to VPGs created manually by someone."""
         self._mock_core_get_network(segmentation_id=100)
         self._mock_tf_client_when_only_manual_created_vpg_exists()
+        self._mock_tf_client_read_fabric_name()
         self._mock_tf_client_get_vmi(None)
         tf_project = self._mock_tf_client_get_project()
         tf_vn = self._mock_tf_client_get_vn()
@@ -121,7 +124,7 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
                                     [{'port_id': 'xe-0/0/1',
                                       'switch_id': 'mac-address',
                                       'switch_info': 'leaf1',
-                                      'fabric': 'fab01'}]}
+                                      'fabric': 'fabric-1'}]}
         expected_bindings = [('profile', json.dumps(expected_binding_profile)),
                              ('vnic_type', 'baremetal')]
         tf_expected_calls = [
@@ -131,6 +134,7 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
                 fq_name=tf_project.fq_name + [expected_vmi_name]),
             mock.call.get_virtual_network("net-1"),
             mock.call.make_vmi_properties_with_vlan_tag(100),
+            mock.call.read_fabric_name_from_switch("leaf1"),
             mock.call.read_pi_from_switch("leaf1", "xe-0/0/1"),
             mock.call.get_virtual_port_group(uuid='vpg-id-1'),
             mock.call.make_key_value_pairs(expected_bindings),
@@ -145,6 +149,7 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
     def test_create_tagging_for_port_when_autocreated_vpg_exists(self):
         self._mock_core_get_network()
         self._mock_tf_client_when_autocreated_vpg_exists()
+        self._mock_tf_client_read_fabric_name()
         self._mock_tf_client_get_vmi(None)
         tf_project = self._mock_tf_client_get_project()
         tf_vn = self._mock_tf_client_get_vn()
@@ -166,7 +171,7 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
                                     [{'port_id': 'xe-0/0/1',
                                       'switch_id': 'mac-address',
                                       'switch_info': 'leaf1',
-                                      'fabric': 'fab01'}]}
+                                      'fabric': 'fabric-1'}]}
         expected_bindings = [('profile', json.dumps(expected_binding_profile)),
                              ('vnic_type', 'baremetal'),
                              ('vpg', 'vpg-2')]
@@ -177,6 +182,7 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
                 fq_name=tf_project.fq_name + [expected_vmi_name]),
             mock.call.get_virtual_network("net-1"),
             mock.call.make_vmi_properties_with_vlan_tag(100),
+            mock.call.read_fabric_name_from_switch("leaf1"),
             mock.call.read_pi_from_switch("leaf1", "xe-0/0/1"),
             mock.call.get_virtual_port_group(uuid='vpg-id-1'),
             mock.call.get_virtual_port_group(uuid='vpg-id-2'),
@@ -188,6 +194,25 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
         ]
         self.tf_client.assert_has_calls(tf_expected_calls)
         self.core_plugin.get_network.assert_called_with(context, "net-1")
+
+    def test_create_tagging_for_port_raise_when_no_fabric_name(self):
+        self._mock_core_get_network()
+        self._mock_tf_client_read_fabric_name(None)
+        self._mock_tf_client_get_vmi(None)
+        self._mock_tf_client_get_project()
+        context = self._get_fake_context()
+
+        port_data = {'network_id': 'net-1',
+                     'binding:host_id': 'compute1',
+                     'device_id': 'vm-1',
+                     'tenant_id': '12345678123456781234567812345678',
+                     'id': 'port-1'}
+        self.assertRaises(dm_integrator.FabricNotFoundError,
+                          self.dm_integrator.create_vlan_tagging_for_port,
+                          context, {'port': port_data})
+
+        self.tf_client.read_fabric_name_from_switch.assert_called_with("leaf1")
+        self.tf_client.create_virtual_machine_interface.assert_not_called()
 
     @ddt.data({'binding:host_id': 'not-managed', 'device_id': 'vm-1'},
               {'device_id': 'vm-1'})
@@ -373,8 +398,7 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
 
     def _get_topology(self):
         switch_port = {'name': 'ens1f1', 'switch_name': 'leaf1',
-                       'port_name': 'xe-0/0/1', 'switch_id': 'mac-address',
-                       'fabric': 'fab01'}
+                       'port_name': 'xe-0/0/1', 'switch_id': 'mac-address'}
         return {'nodes': [{'name': 'compute1', 'ports': [switch_port]}]}
 
     def _get_fake_context(self, **kwargs):
@@ -462,6 +486,10 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
             return_value=vpg_refs)
         self.tf_client.read_pi_from_switch = mock.Mock(
             return_value=physical_interface)
+
+    def _mock_tf_client_read_fabric_name(self, fabric_name="fabric-1"):
+        self.tf_client.read_fabric_name_from_switch = mock.Mock(
+            return_value=fabric_name)
 
     def _mock_core_get_network(self, segmentation_id=100, net_type='vlan'):
         self.core_plugin.get_network = mock.Mock(

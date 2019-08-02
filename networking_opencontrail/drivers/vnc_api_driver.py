@@ -65,11 +65,25 @@ class VncApiClient(object):
         pi_fq_name = [self.DEFAULT_GLOBAL_CONF, switch_name, pi_name]
         return self.get_physical_interface(fq_name=pi_fq_name)
 
+    def read_fabric_name_from_switch(self, switch_name):
+        pr_fq_name = [self.DEFAULT_GLOBAL_CONF, switch_name]
+        pr = self.get_physical_router(fq_name=pr_fq_name)
+        if not pr:
+            return None
+        fabric_refs = pr.get_fabric_refs()
+        if not fabric_refs:
+            return None
+        return fabric_refs[0]['to'][-1]
+
     def get_project(self, uuid=None, fq_name=None):
         return self._get_object("project", uuid=uuid, fq_name=fq_name)
 
     def get_physical_interface(self, uuid=None, fq_name=None):
         return self._get_object("physical_interface",
+                                uuid=uuid, fq_name=fq_name)
+
+    def get_physical_router(self, uuid=None, fq_name=None):
+        return self._get_object("physical_router",
                                 uuid=uuid, fq_name=fq_name)
 
     def get_virtual_network(self, uuid=None, fq_name=None):

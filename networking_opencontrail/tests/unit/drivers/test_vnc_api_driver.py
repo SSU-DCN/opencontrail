@@ -84,6 +84,42 @@ class VncApiDriverTestCase(base.TestCase):
             id=None)
 
     @mock.patch("oslo_config.cfg.CONF")
+    def test_read_fabric_name_from_switch(self, cfg):
+        fabric_refs = [{'to': ['parent-name', 'fabric-1']}]
+        pr = mock.Mock()
+        pr.get_fabric_refs = mock.Mock(return_value=fabric_refs)
+        self.vnc_api.physical_router_read = mock.Mock(return_value=pr)
+
+        fabric_name = self.driver.read_fabric_name_from_switch("switch-1")
+
+        self.vnc_api.physical_router_read.assert_called_with(
+            fq_name=["default-global-system-config", "switch-1"], id=None)
+        self.assertEqual(fabric_name, "fabric-1")
+
+    @mock.patch("oslo_config.cfg.CONF")
+    def test_read_fabric_name_from_switch_return_none_when_no_pr(self, cfg):
+        self.vnc_api.physical_router_read = mock.Mock(
+            side_effect=vnc_api.NoIdError("id-1"))
+
+        fabric_name = self.driver.read_fabric_name_from_switch("switch-1")
+
+        self.vnc_api.physical_router_read.assert_called_with(
+            fq_name=["default-global-system-config", "switch-1"], id=None)
+        self.assertIsNone(fabric_name)
+
+    @mock.patch("oslo_config.cfg.CONF")
+    def test_read_fabric_name_from_switch_return_none_when_no_ref(self, cfg):
+        pr = mock.Mock()
+        pr.get_fabric_refs = mock.Mock(return_value=None)
+        self.vnc_api.physical_router_read = mock.Mock(return_value=pr)
+
+        fabric_name = self.driver.read_fabric_name_from_switch("switch-1")
+
+        self.vnc_api.physical_router_read.assert_called_with(
+            fq_name=["default-global-system-config", "switch-1"], id=None)
+        self.assertIsNone(fabric_name)
+
+    @mock.patch("oslo_config.cfg.CONF")
     def test_create_virtual_machine_interface(self, cfg):
         vmi = mock.Mock()
 
@@ -139,7 +175,8 @@ class VncApiDriverTestCase(base.TestCase):
               "virtual_network",
               "virtual_machine_interface",
               "project",
-              "virtual_port_group")
+              "virtual_port_group",
+              "physical_router")
     @mock.patch("oslo_config.cfg.CONF")
     def test_get_objects_from_vnc_api(self, object_name, cfg):
         get_func = "get_%s" % object_name
@@ -156,7 +193,8 @@ class VncApiDriverTestCase(base.TestCase):
               "virtual_network",
               "virtual_machine_interface",
               "project",
-              "virtual_port_group")
+              "virtual_port_group",
+              "physical_router")
     @mock.patch("oslo_config.cfg.CONF")
     def test_get_objects_from_vnc_api_when_obj_not_exists(self,
                                                           object_name, cfg):

@@ -24,8 +24,7 @@ def _get_topology():
     switch_port = {'name': 'ens1f1',
                    'switch_name': 'leaf1',
                    'port_name': 'xe-0/0/1',
-                   'switch_id': 'mac-address',
-                   'fabric': 'fab01'}
+                   'switch_id': 'mac-address'}
     return {'nodes': [{'name': 'compute1', 'ports': [switch_port]}]}
 
 

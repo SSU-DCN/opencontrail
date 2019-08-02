@@ -41,13 +41,9 @@ class DmTopologyLoader(object):
                  {'name': 'ens1f1',
                   'switch_name': 'vqfx-10k-leaf2',
                   'port_name': 'xe-0/0/1',
-                  'switch_id': '52:54:00:29:b1:a6',
-                  'fabric': 'fab01'}
+                  'switch_id': '52:54:00:29:b1:a6'}
              ]}
         ]}
-
-        NOTE: "fabric" is not a valid key in "server import" job (for importing
-        servers by Contrail Command).
         """
 
         schema = """
@@ -73,7 +69,6 @@ class DmTopologyLoader(object):
                     - switch_name
                     - port_name
                     - switch_id
-                    - fabric
                     properties:
                       name:
                         type: string
@@ -82,8 +77,6 @@ class DmTopologyLoader(object):
                       port_name:
                         type: string
                       switch_id:
-                        type: string
-                      fabric:
                         type: string
                 """
 

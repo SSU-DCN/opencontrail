@@ -132,11 +132,19 @@ class DeviceManagerIntegrator(object):
 
     def _get_bindings(self, port, node):
         node_port = node['ports'][0]
+        fabric_name = self.tf_client.read_fabric_name_from_switch(
+            node_port['switch_name'])
+
+        if not fabric_name:
+            LOG.error("Cannot find fabric name for switch %s" %
+                      node_port['switch_name'])
+            raise FabricNotFoundError
+
         profile = {'local_link_information': [{
             'port_id': node_port['port_name'],
             'switch_id': node_port['switch_id'],
             'switch_info': node_port['switch_name'],
-            'fabric': node_port['fabric'],
+            'fabric': fabric_name
         }]}
         bindings_list = [('profile', json.dumps(profile)),
                          ('vnic_type', DM_MANAGED_VNIC_TYPE)]
@@ -173,3 +181,7 @@ class DeviceManagerIntegrator(object):
     @property
     def _core_plugin(self):
         return directory.get_plugin()
+
+
+class FabricNotFoundError(Exception):
+    pass

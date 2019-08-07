@@ -40,8 +40,7 @@ class DmTopologyLoader(object):
              'ports': [
                  {'name': 'ens1f1',
                   'switch_name': 'vqfx-10k-leaf2',
-                  'port_name': 'xe-0/0/1',
-                  'switch_id': '52:54:00:29:b1:a6'}
+                  'port_name': 'xe-0/0/1'}
              ]}
         ]}
         """
@@ -68,7 +67,6 @@ class DmTopologyLoader(object):
                     required:
                     - switch_name
                     - port_name
-                    - switch_id
                     properties:
                       name:
                         type: string
@@ -76,18 +74,16 @@ class DmTopologyLoader(object):
                         type: string
                       port_name:
                         type: string
-                      switch_id:
-                        type: string
                 """
 
         try:
-            validate(config, yaml.load(schema))
+            validate(config, yaml.safe_load(schema))
         except ValidationError as e:
             raise ConfigInvalidFormat(e)
 
     def _load_yaml_file(self, topology_filename):
         with open(topology_filename, "r") as topology_yaml:
-            return yaml.load(topology_yaml)
+            return yaml.safe_load(topology_yaml)
 
 
 class ConfigInvalidFormat(Exception):

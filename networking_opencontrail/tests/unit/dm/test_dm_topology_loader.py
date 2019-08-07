@@ -15,17 +15,16 @@
 
 import mock
 
-from networking_opencontrail.ml2 import dm_topology_loader
-from networking_opencontrail.ml2.dm_topology_loader import ConfigInvalidFormat
-from networking_opencontrail.ml2.dm_topology_loader import NoTopologyFileError
+from networking_opencontrail.dm import dm_topology_loader
+from networking_opencontrail.dm.dm_topology_loader import ConfigInvalidFormat
+from networking_opencontrail.dm.dm_topology_loader import NoTopologyFileError
 from networking_opencontrail.tests import base
 
 
 def _get_topology():
     switch_port = {'name': 'ens1f1',
                    'switch_name': 'leaf1',
-                   'port_name': 'xe-0/0/1',
-                   'switch_id': 'mac-address'}
+                   'port_name': 'xe-0/0/1'}
     return {'nodes': [{'name': 'compute1', 'ports': [switch_port]}]}
 
 

@@ -18,8 +18,8 @@ from oslo_log import log as logging
 import networking_opencontrail.drivers.drv_opencontrail as drv
 from neutron_lib.plugins.ml2 import api
 
+from networking_opencontrail.dm import dm_integrator
 from networking_opencontrail.l3 import snat_synchronizer
-from networking_opencontrail.ml2 import dm_integrator
 from networking_opencontrail.ml2 import opencontrail_sg_callback
 from networking_opencontrail.ml2 import subnet_dns_integrator
 

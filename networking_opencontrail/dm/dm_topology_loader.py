@@ -28,7 +28,7 @@ class DmTopologyLoader(object):
             self.validate(topology)
             return topology
         else:
-            raise NoTopologyFileError
+            return None
 
     def validate(self, config):
         self._validate_schema(config)
@@ -96,8 +96,4 @@ class DmTopologyLoader(object):
 
 
 class ConfigInvalidFormat(Exception):
-    pass
-
-
-class NoTopologyFileError(Exception):
     pass

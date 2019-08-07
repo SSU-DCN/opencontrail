@@ -16,32 +16,32 @@ import json
 
 from oslo_log import log as logging
 
-from networking_opencontrail.dm.dm_topology_loader import DmTopologyLoader
+from networking_opencontrail.dm.dm_topology import DmTopology
 
 LOG = logging.getLogger(__name__)
 
 DM_MANAGED_VNIC_TYPE = 'baremetal'
 
 
-class DmNodeHelper(object):
+class DmBindingsHelper(object):
+    """DmBindingsHelper helps creating bindings for integration with FM.
+
+    This check if host should be managed by Device Manager and
+    prepare bindings for VMI with details about baremetal physical connections.
+    """
+
     def __init__(self, tf_client):
         self.tf_client = tf_client
-        self.topology_loader = DmTopologyLoader()
+        self.topology = DmTopology(self.tf_client)
 
     def initialize(self):
-        self.topology = self.topology_loader.load()
+        self.topology.initialize()
 
-    def check_node_managed(self, host_id):
-        node = self._get_node_from_file(host_id)
-        return node is not None
+    def check_host_managed(self, host_id):
+        return host_id in self.topology
 
-    def get_bindings_for_node(self, host_id):
-        node = self._get_node_from_file(host_id)
-        if not node:
-            LOG.error("Try to get binding for node %s, but node not found" %
-                      host_id)
-            raise NodeNotFoundError
-
+    def get_bindings_for_host(self, host_id):
+        node = self.topology.get_node(host_id)
         node_port = node['ports'][0]
         fabric_name = self.tf_client.read_fabric_name_from_switch(
             node_port['switch_name'])
@@ -66,24 +66,20 @@ class DmNodeHelper(object):
 
         return self.tf_client.make_key_value_pairs(bindings_list)
 
-    def _get_node_from_file(self, host_id):
-        nodes = [n for n in self.topology['nodes'] if n['name'] == host_id]
-        if len(nodes) == 1:
-            return nodes[0]
-        if len(nodes) > 1:
-            LOG.error("For host '%s' there is more than one matched nodes." %
-                      host_id)
-        return None
-
     def _find_existing_vpg(self, switch_node, port_node):
         pi = self.tf_client.read_pi_from_switch(switch_node, port_node)
-        if pi:
-            vpg_refs = pi.get_virtual_port_group_back_refs() or []
-            for vpg_ref in vpg_refs:
-                vpg = self.tf_client.get_virtual_port_group(
-                    uuid=vpg_ref['uuid'])
-                if not vpg.get_virtual_port_group_user_created():
-                    return vpg.fq_name[-1]
+
+        if not pi:
+            LOG.error("PI %s on switch %s not found in API" %
+                      (port_node, switch_node))
+            raise PhysicalInterfaceNotFoundError
+
+        vpg_refs = pi.get_virtual_port_group_back_refs() or []
+        for vpg_ref in vpg_refs:
+            vpg = self.tf_client.get_virtual_port_group(
+                uuid=vpg_ref['uuid'])
+            if not vpg.get_virtual_port_group_user_created():
+                return vpg.fq_name[-1]
         return None
 
 
@@ -91,5 +87,5 @@ class FabricNotFoundError(Exception):
     pass
 
 
-class NodeNotFoundError(Exception):
+class PhysicalInterfaceNotFoundError(Exception):
     pass

@@ -19,12 +19,10 @@ from neutron_lib.plugins import directory
 from oslo_config import cfg
 from oslo_log import log as logging
 
-from networking_opencontrail.dm.dm_node_helper import DmNodeHelper
+from networking_opencontrail.dm.dm_bindings_helper import DmBindingsHelper
 from networking_opencontrail.drivers.vnc_api_driver import VncApiClient
 
 LOG = logging.getLogger(__name__)
-
-DM_MANAGED_VNIC_TYPE = 'baremetal'
 
 
 class DeviceManagerIntegrator(object):
@@ -37,11 +35,11 @@ class DeviceManagerIntegrator(object):
 
     def __init__(self):
         self.tf_client = VncApiClient()
-        self.node_helper = DmNodeHelper(self.tf_client)
+        self.bindings_helper = DmBindingsHelper(self.tf_client)
 
     def initialize(self):
         if self.enabled:
-            self.node_helper.initialize()
+            self.bindings_helper.initialize()
 
     def create_vlan_tagging_for_port(self, context, port):
         if not self._check_host_managed(port['port']):
@@ -69,7 +67,7 @@ class DeviceManagerIntegrator(object):
             return
 
         properties = self.tf_client.make_vmi_properties_with_vlan_tag(vlan_tag)
-        bindings = self.node_helper.get_bindings_for_node(
+        bindings = self.bindings_helper.get_bindings_for_host(
             port['port']['binding:host_id'])
         vmi = self.tf_client.make_virtual_machine_interface(
             vmi_name, tf_vn, properties, bindings, tf_project)
@@ -99,7 +97,8 @@ class DeviceManagerIntegrator(object):
     def _check_host_managed(self, port):
         host_id = port.get('binding:host_id')
         device_id = port.get('device_id', '')
-        if not self.node_helper.check_node_managed(host_id) or not device_id:
+        managed_host = self.bindings_helper.check_host_managed(host_id)
+        if not managed_host or not device_id:
             LOG.debug("Compute '%s' is not managed by Device Manager or no "
                       "connected VM. DM integration skipped. " % (host_id))
             return False

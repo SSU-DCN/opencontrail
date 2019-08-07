@@ -75,13 +75,25 @@ class VncApiDriverTestCase(base.TestCase):
                                    {"key": "key-2", "value": "val-2"}]}}
         self.assertEqual(kv_pairs.exportDict(), dict_translation)
 
-    @mock.patch("oslo_config.cfg.CONF")
-    def test_read_pi_from_switch(self, cfg):
-        self.driver.read_pi_from_switch("switch-1", "pi-1")
+    def test_read_pi_from_switch(self):
+        pi = mock.Mock()
+        self.driver.get_physical_interface = mock.Mock(return_value=pi)
 
-        self.vnc_api.physical_interface_read.assert_called_with(
-            fq_name=["default-global-system-config", "switch-1", "pi-1"],
-            id=None)
+        result = self.driver.read_pi_from_switch("switch-1", "pi-1")
+
+        self.driver.get_physical_interface.assert_called_with(
+            fq_name=["default-global-system-config", "switch-1", "pi-1"])
+        self.assertEqual(pi, result)
+
+    def test_read_node_by_hostname(self):
+        node = mock.Mock()
+        self.driver.get_node = mock.Mock(return_value=node)
+
+        result = self.driver.read_node_by_hostname("host-1")
+
+        self.driver.get_node.assert_called_with(
+            fq_name=["default-global-system-config", "host-1"])
+        self.assertEqual(node, result)
 
     @mock.patch("oslo_config.cfg.CONF")
     def test_read_fabric_name_from_switch(self, cfg):
@@ -176,7 +188,9 @@ class VncApiDriverTestCase(base.TestCase):
               "virtual_machine_interface",
               "project",
               "virtual_port_group",
-              "physical_router")
+              "physical_router",
+              "port",
+              "node")
     @mock.patch("oslo_config.cfg.CONF")
     def test_get_objects_from_vnc_api(self, object_name, cfg):
         get_func = "get_%s" % object_name
@@ -194,7 +208,9 @@ class VncApiDriverTestCase(base.TestCase):
               "virtual_machine_interface",
               "project",
               "virtual_port_group",
-              "physical_router")
+              "physical_router",
+              "port",
+              "node")
     @mock.patch("oslo_config.cfg.CONF")
     def test_get_objects_from_vnc_api_when_obj_not_exists(self,
                                                           object_name, cfg):

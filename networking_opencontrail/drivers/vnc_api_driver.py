@@ -75,8 +75,18 @@ class VncApiClient(object):
             return None
         return fabric_refs[0]['to'][-1]
 
+    def read_node_by_hostname(self, host_id):
+        node_fq_name = [self.DEFAULT_GLOBAL_CONF, host_id]
+        return self.get_node(fq_name=node_fq_name)
+
     def get_project(self, uuid=None, fq_name=None):
         return self._get_object("project", uuid=uuid, fq_name=fq_name)
+
+    def get_port(self, uuid=None, fq_name=None):
+        return self._get_object("port", uuid=uuid, fq_name=fq_name)
+
+    def get_node(self, uuid=None, fq_name=None):
+        return self._get_object("node", uuid=uuid, fq_name=fq_name)
 
     def get_physical_interface(self, uuid=None, fq_name=None):
         return self._get_object("physical_interface",

@@ -12,66 +12,68 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 #
-import ddt
 import json
 
+import ddt
 import mock
 
-from networking_opencontrail.dm.dm_node_helper import DmNodeHelper
-from networking_opencontrail.dm.dm_node_helper import FabricNotFoundError
-from networking_opencontrail.dm.dm_node_helper import NodeNotFoundError
-from networking_opencontrail.dm.dm_topology_loader import ConfigInvalidFormat
+from networking_opencontrail.dm.dm_bindings_helper import DmBindingsHelper
+from networking_opencontrail.dm.dm_bindings_helper import FabricNotFoundError
+from networking_opencontrail.dm.dm_bindings_helper import \
+    PhysicalInterfaceNotFoundError
+from networking_opencontrail.dm.dm_topology import DmTopology
 from networking_opencontrail.drivers.vnc_api_driver import VncApiClient
 from networking_opencontrail.tests import base
 
 
 @ddt.ddt
-class DmNodeHelperTestCase(base.TestCase):
-    @mock.patch("oslo_config.cfg.CONF",
-                DM_INTEGRATION=mock.MagicMock(enabled=True))
-    def setUp(self, config):
-        super(DmNodeHelperTestCase, self).setUp()
+class DmBindingsHelperTestCase(base.TestCase):
+    @mock.patch("oslo_config.cfg.CONF")
+    @mock.patch("networking_opencontrail.dm.dm_bindings_helper.DmTopology")
+    def setUp(self, topology, config):
+        super(DmBindingsHelperTestCase, self).setUp()
         self.tf_client = mock.Mock(spec_set=VncApiClient())
+        self.dm_topology = mock.Mock(spec_set=DmTopology)
+        topology.return_value = self.dm_topology
 
-        self.helper = DmNodeHelper(self.tf_client)
-        self.helper.topology_loader.load = mock.Mock(
-            return_value=self._get_topology())
+        self.helper = DmBindingsHelper(self.tf_client)
         self.helper.initialize()
 
         def tearDown(self):
-            super(DmNodeHelperTestCase, self).tearDown()
+            super(DmBindingsHelperTestCase, self).tearDown()
 
-    @mock.patch("networking_opencontrail.dm.dm_node_helper"
-                ".DmTopologyLoader")
-    def test_topology_is_loaded_on_initializing(self, loader):
-        topology = mock.Mock()
-        loader().load = mock.Mock(return_value=topology)
-        helper = DmNodeHelper(self.tf_client)
+    @mock.patch("networking_opencontrail.dm.dm_bindings_helper.DmTopology")
+    def test_topology_is_initialized_on_initializing(self, topology):
+        helper = DmBindingsHelper(self.tf_client)
 
         helper.initialize()
 
-        self.assertEqual(helper.topology, topology)
+        topology.assert_called_with(self.tf_client)
+        topology().initialize.assert_called()
 
-    def test_topology_should_be_validated_on_initializing(self):
-        self.helper.topology_loader.load = \
-            mock.Mock(side_effect=ConfigInvalidFormat)
-        self.assertRaises(ConfigInvalidFormat, self.helper.initialize)
+    def test_check_host_managed_true_when_dm_topology_true(self):
+        self.dm_topology.__contains__ = mock.Mock(return_value=True)
 
-    def test_check_node_managed_true_when_in_topology_file(self):
-        result = self.helper.check_node_managed("compute1")
+        result = self.helper.check_host_managed("compute1")
+
         self.assertEqual(True, result)
+        self.dm_topology.__contains__.assert_called_with("compute1")
 
-    @ddt.data('not-managed', None)
-    def test_check_node_managed_false_when_not_in_topology_file(self, host_id):
-        result = self.helper.check_node_managed(host_id)
+    def test_check_host_managed_false_when_dm_topology_false(self):
+        self.dm_topology.__contains__ = mock.Mock(return_value=False)
+
+        result = self.helper.check_host_managed("compute1")
+
         self.assertEqual(False, result)
+        self.dm_topology.__contains__.assert_called_with("compute1")
 
-    def test_get_bindings_for_node_when_first_in_vpg(self):
+    def test_get_bindings_for_host_when_first_in_vpg(self):
+        self._mock_get_node()
         self._mock_tf_client_when_no_vpg()
         self._mock_tf_client_read_fabric_name()
         tf_kvpairs = self._mock_tf_client_make_key_value_pairs()
 
-        bindings = self.helper.get_bindings_for_node('compute1')
+        bindings = self.helper.get_bindings_for_host('compute1')
 
         expected_binding_profile = {'local_link_information':
                                     [{'port_id': 'xe-0/0/1',
@@ -85,15 +87,17 @@ class DmNodeHelperTestCase(base.TestCase):
             mock.call.make_key_value_pairs(expected_bindings)
         ]
         self.tf_client.assert_has_calls(tf_expected_calls)
+        self.dm_topology.get_node.assert_called_with('compute1')
         self.assertEqual(tf_kvpairs, bindings)
 
-    def test_get_bindings_for_node_when_only_maually_vpg_exist(self):
+    def test_get_bindings_for_host_when_only_maually_vpg_exist(self):
         """Don't connect to VPGs created manually by someone."""
+        self._mock_get_node()
         self._mock_tf_client_when_only_manually_created_vpg_exists()
         self._mock_tf_client_read_fabric_name()
         tf_kvpairs = self._mock_tf_client_make_key_value_pairs()
 
-        bindings = self.helper.get_bindings_for_node('compute1')
+        bindings = self.helper.get_bindings_for_host('compute1')
 
         expected_binding_profile = {'local_link_information':
                                     [{'port_id': 'xe-0/0/1',
@@ -108,14 +112,16 @@ class DmNodeHelperTestCase(base.TestCase):
             mock.call.make_key_value_pairs(expected_bindings),
         ]
         self.tf_client.assert_has_calls(tf_expected_calls)
+        self.dm_topology.get_node.assert_called_with('compute1')
         self.assertEqual(tf_kvpairs, bindings)
 
-    def test_get_bindings_for_node_when_exists_autocreated_vpg(self):
+    def test_get_bindings_for_host_when_exists_autocreated_vpg(self):
+        self._mock_get_node()
         self._mock_tf_client_when_autocreated_vpg_exists()
         self._mock_tf_client_read_fabric_name()
         tf_kvpairs = self._mock_tf_client_make_key_value_pairs()
 
-        bindings = self.helper.get_bindings_for_node('compute1')
+        bindings = self.helper.get_bindings_for_host('compute1')
 
         expected_binding_profile = {'local_link_information':
                                     [{'port_id': 'xe-0/0/1',
@@ -132,28 +138,59 @@ class DmNodeHelperTestCase(base.TestCase):
             mock.call.make_key_value_pairs(expected_bindings),
         ]
         self.tf_client.assert_has_calls(tf_expected_calls)
+        self.dm_topology.get_node.assert_called_with('compute1')
         self.assertEqual(tf_kvpairs, bindings)
 
-    def test_get_bindings_for_node_raise_when_no_fabric_name(self):
+    def test_get_bindings_for_host_raise_when_no_fabric_name(self):
+        self._mock_get_node()
         self._mock_tf_client_read_fabric_name(None)
 
         self.assertRaises(FabricNotFoundError,
-                          self.helper.get_bindings_for_node,
+                          self.helper.get_bindings_for_host,
                           'compute1')
 
         self.tf_client.read_fabric_name_from_switch.assert_called_with("leaf1")
+        self.dm_topology.get_node.assert_called_with('compute1')
 
-    @ddt.data('not-managed', None)
-    def test_get_bindings_raise_when_no_node_in_topology(self, host_id):
-        self.assertRaises(NodeNotFoundError,
-                          self.helper.get_bindings_for_node,
-                          host_id)
-        self.tf_client.assert_not_called()
+    def test_get_bindings_for_host_raise_when_pi_not_exist(self):
+        self._mock_get_node()
+        self._mock_tf_client_read_fabric_name()
+        self.tf_client.read_pi_from_switch = mock.Mock(return_value=None)
+
+        self.assertRaises(PhysicalInterfaceNotFoundError,
+                          self.helper.get_bindings_for_host,
+                          'compute1')
+
+        self.tf_client.read_pi_from_switch('leaf1', 'xe-0/0/1')
+        self.dm_topology.get_node.assert_called_with('compute1')
 
     def _get_topology(self):
         switch_port = {'name': 'ens1f1', 'switch_name': 'leaf1',
                        'port_name': 'xe-0/0/1'}
         return {'nodes': [{'name': 'compute1', 'ports': [switch_port]}]}
+
+    def _set_no_topology_from_file(self):
+        """When there is no topology loaded from file, get data from API"""
+        self.helper.topology = None
+
+    def _mock_get_node(self):
+        switch_port = {'name': 'ens1f1', 'switch_name': 'leaf1',
+                       'port_name': 'xe-0/0/1'}
+        node = {'name': 'compute1', 'ports': [switch_port]}
+        self.dm_topology.get_node.return_value = node
+
+    def _mock_get_node_none(self):
+        self.dm_topology.get_node.return_value = None
+
+    def _mock_tf_client_node_in_api(self):
+        pi = mock.Mock(fq_name=['default-config', 'leaf2', 'xe-1/1/1'])
+        port = mock.Mock(get_physical_interface_back_refs=mock.Mock(
+            return_value=[{'to': pi.fq_name}]))
+        node = mock.Mock(get_ports=mock.Mock(
+            return_value=[{'uuid': 'port-id-1'}]))
+
+        self.tf_client.read_node_by_hostname = mock.Mock(return_value=node)
+        self.tf_client.get_port = mock.Mock(return_value=port)
 
     def _mock_tf_client_when_no_vpg(self):
         self._mock_tf_client_physical_interface(vpg_refs=None)

@@ -31,6 +31,10 @@ class DmTopologyLoader(object):
             raise NoTopologyFileError
 
     def validate(self, config):
+        self._validate_schema(config)
+        self._validate_unique_names(config)
+
+    def _validate_schema(self, config):
         """Validates config. Expected format is dict.
 
         Example of valid config:
@@ -80,6 +84,11 @@ class DmTopologyLoader(object):
             validate(config, yaml.safe_load(schema))
         except ValidationError as e:
             raise ConfigInvalidFormat(e)
+
+    def _validate_unique_names(self, config):
+        names = {node['name'] for node in config['nodes']}
+        if len(names) != len(config['nodes']):
+            raise ConfigInvalidFormat("Duplicated node names")
 
     def _load_yaml_file(self, topology_filename):
         with open(topology_filename, "r") as topology_yaml:

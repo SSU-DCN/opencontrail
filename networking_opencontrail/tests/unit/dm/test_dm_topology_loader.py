@@ -29,14 +29,14 @@ def _get_topology():
 
 
 class TestDmTopologyLoader(base.TestCase):
-
     @mock.patch("oslo_config.cfg.CONF",
                 DM_INTEGRATION=mock.MagicMock(topology=None))
     def setUp(self, conf):
         super(TestDmTopologyLoader, self).setUp()
         self.dm_topology_loader = dm_topology_loader.DmTopologyLoader()
 
-    @mock.patch("oslo_config.cfg.CONF")
+    @mock.patch("oslo_config.cfg.CONF",
+                DM_INTEGRATION=mock.MagicMock(topology='path/'))
     def test_correct_topology_should_return_dict(self, _):
         yaml_file = _get_topology()
         self.dm_topology_loader._load_yaml_file = mock.Mock(
@@ -45,6 +45,20 @@ class TestDmTopologyLoader(base.TestCase):
         actual = self.dm_topology_loader.load()
 
         self.assertEqual(yaml_file, actual)
+        self.dm_topology_loader._load_yaml_file.assert_called_with('path/')
+
+    @mock.patch("oslo_config.cfg.CONF")
+    def test_duplicated_node_names_should_raise_exception(self, _):
+        yaml_file = _get_topology()
+        port = {'name': 'port-2',
+                'switch_name': 'leaf2',
+                'port_name': 'xe-0/1/1'}
+        yaml_file['nodes'].append({'name': 'compute1', 'ports': [port]})
+
+        self.dm_topology_loader._load_yaml_file = mock.Mock(
+            return_value=yaml_file)
+
+        self.assertRaises(ConfigInvalidFormat, self.dm_topology_loader.load)
 
     @mock.patch("oslo_config.cfg.CONF")
     def test_invalid_schema_should_raise_exception(self, _):
@@ -75,3 +89,16 @@ class TestDmTopologyLoader(base.TestCase):
         config.DM_INTEGRATION.topology = None
 
         self.assertRaises(NoTopologyFileError, self.dm_topology_loader.load)
+
+    @mock.patch("oslo_config.cfg.CONF")
+    @mock.patch("networking_opencontrail.dm.dm_topology_loader.yaml")
+    def test_load_yaml_file_loads_right_file(self, yaml, _):
+        yaml.safe_load = mock.Mock(return_value='loaded')
+
+        with mock.patch("networking_opencontrail.dm.dm_topology_loader.open",
+                        mock.mock_open(), create=True) as mocked_open:
+            value = self.dm_topology_loader._load_yaml_file('path/to/file')
+
+            mocked_open.assert_called_with('path/to/file', 'r')
+            yaml.safe_load.assert_called_with(mocked_open())
+            self.assertEqual('loaded', value)

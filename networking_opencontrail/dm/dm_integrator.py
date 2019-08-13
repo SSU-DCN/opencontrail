@@ -42,7 +42,7 @@ class DeviceManagerIntegrator(object):
             self.bindings_helper.initialize()
 
     def create_vlan_tagging_for_port(self, context, port):
-        if not self._check_host_managed(port['port']):
+        if not self._check_should_be_tagged(port['port']):
             return
 
         network_id = port['port']['network_id']
@@ -73,11 +73,11 @@ class DeviceManagerIntegrator(object):
             vmi_name, tf_vn, properties, bindings, tf_project)
 
         self.tf_client.create_virtual_machine_interface(vmi)
-        LOG.warning("Created VMI with bindings for DM for port %s",
-                    port['port']['id'])
+        LOG.debug("Created VMI with bindings for DM for port %s",
+                  port['port']['id'])
 
     def delete_vlan_tagging_for_port(self, port):
-        if not self._check_host_managed(port):
+        if not self._check_should_be_tagged(port):
             return
 
         tf_project = self.tf_client.get_project(
@@ -94,11 +94,12 @@ class DeviceManagerIntegrator(object):
             LOG.debug("Deleted VMI with bindings for DM for port %s" %
                       port['id'])
 
-    def _check_host_managed(self, port):
+    def _check_should_be_tagged(self, port):
         host_id = port.get('binding:host_id')
-        device_id = port.get('device_id', '')
+        device_id = port.get('device_id', None)
+        compute_owner = port.get('device_owner', '').startswith('compute:')
         managed_host = self.bindings_helper.check_host_managed(host_id)
-        if not managed_host or not device_id:
+        if not managed_host or not device_id or not compute_owner:
             LOG.debug("Compute '%s' is not managed by Device Manager or no "
                       "connected VM. DM integration skipped. " % (host_id))
             return False

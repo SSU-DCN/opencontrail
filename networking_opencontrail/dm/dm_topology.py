@@ -57,19 +57,26 @@ class DmTopology(object):
     def _get_node_from_api(self, host_id):
         try:
             vnc_node = self.tf_client.read_node_by_hostname(host_id)
-            port_uuid = vnc_node.get_ports()[0]['uuid']
-            port = self.tf_client.get_port(uuid=port_uuid)
-            pi = port.get_physical_interface_back_refs()[0]
+
             node = {'name': host_id,
-                    'ports': [{'name': port.fq_name[-1],
-                               'port_name': pi['to'][-1],
-                               'switch_name': pi['to'][-2]}]}
+                    'ports': []}
+            for port_ref in vnc_node.get_ports():
+                port = self.tf_client.get_port(uuid=port_ref['uuid'])
+                pi = port.get_physical_interface_back_refs()
+                if pi:
+                    node['ports'].append({'name': port.fq_name[-1],
+                                          'port_name': pi[0]['to'][-1],
+                                          'switch_name': pi[0]['to'][-2]})
+            if len(node['ports']) == 0:
+                LOG.error("Node %s has no port connected to physical interface"
+                          % host_id)
+                raise InvalidNodeError
             return node
         except (AttributeError, TypeError) as err:
             LOG.error("Error during collecting node details from API. "
                       "For node %s data in API are incomplete" % host_id)
             LOG.exception(err)
-            raise NodeNotFoundError
+            raise InvalidNodeError
 
     @property
     def _file_loaded(self):
@@ -77,4 +84,8 @@ class DmTopology(object):
 
 
 class NodeNotFoundError(Exception):
+    pass
+
+
+class InvalidNodeError(Exception):
     pass

@@ -42,45 +42,56 @@ class DmBindingsHelper(object):
 
     def get_bindings_for_host(self, host_id):
         node = self.topology.get_node(host_id)
-        node_port = node['ports'][0]
-        fabric_name = self.tf_client.read_fabric_name_from_switch(
-            node_port['switch_name'])
 
-        if not fabric_name:
-            LOG.error("Cannot find fabric name for switch %s" %
-                      node_port['switch_name'])
-            raise FabricNotFoundError
+        port_profiles = []
+        for port in node['ports']:
+            fabric_name = self.tf_client.read_fabric_name_from_switch(
+                port['switch_name'])
 
-        profile = {'local_link_information': [{
-            'port_id': node_port['port_name'],
-            'switch_info': node_port['switch_name'],
-            'fabric': fabric_name
-        }]}
+            if not fabric_name:
+                LOG.error("Cannot find fabric name for switch %s" %
+                          port['switch_name'])
+                raise FabricNotFoundError
+
+            port_profiles.append({'port_id': port['port_name'],
+                                  'switch_info': port['switch_name'],
+                                  'fabric': fabric_name})
+
+        profile = {'local_link_information': port_profiles}
         bindings_list = [('profile', json.dumps(profile)),
                          ('vnic_type', DM_MANAGED_VNIC_TYPE)]
 
-        vpg = self._find_existing_vpg(node_port['switch_name'],
-                                      node_port['port_name'])
+        vpg = self._find_existing_vpg(node['ports'])
         if vpg:
             bindings_list.append(('vpg', vpg))
 
         return self.tf_client.make_key_value_pairs(bindings_list)
 
-    def _find_existing_vpg(self, switch_node, port_node):
-        pi = self.tf_client.read_pi_from_switch(switch_node, port_node)
+    def _find_existing_vpg(self, ports):
+        pi = self.tf_client.read_pi_from_switch(ports[0]['switch_name'],
+                                                ports[0]['port_name'])
 
         if not pi:
             LOG.error("PI %s on switch %s not found in API" %
-                      (port_node, switch_node))
+                      (ports[0]['port_name'], ports[0]['switch_name']))
             raise PhysicalInterfaceNotFoundError
 
         vpg_refs = pi.get_virtual_port_group_back_refs() or []
         for vpg_ref in vpg_refs:
             vpg = self.tf_client.get_virtual_port_group(
                 uuid=vpg_ref['uuid'])
-            if not vpg.get_virtual_port_group_user_created():
+            if vpg.get_virtual_port_group_user_created():
+                continue
+            pi_refs = vpg.get_physical_interface_refs() or []
+            if self._check_refs_to_all_ports(pi_refs, ports):
                 return vpg.fq_name[-1]
         return None
+
+    def _check_refs_to_all_ports(self, pi_refs, ports):
+        required_pi = {(port['switch_name'], port['port_name'])
+                       for port in ports}
+        existing_refs = {(ref['to'][-2], ref['to'][-1]) for ref in pi_refs}
+        return required_pi == existing_refs
 
 
 class FabricNotFoundError(Exception):

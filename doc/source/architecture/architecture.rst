@@ -89,9 +89,10 @@ does not push the Floating IP's Port resource to the Tungsten Fabric.
 
 .. _OpenDaylight l3 driver: https://github.com/openstack/networking-odl/blob/master/networking_odl/l3/l3_odl_v2.py
 
-Connectivity with Tungsten Fabric
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Communication to Tungsten Fabric is done by requesting Tungsten's vnc_openstack API.
+Connectivity with Tungsten Fabric using vnc_openstack
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Most of communication to Tungsten Fabric is done by requesting Tungsten's
+vnc_openstack API.
 
 Vnc_openstack is module designed to perform a translation of Neutron data structures
 to Tungsten Fabric representation. When request gets to Tungsten Fabric side
@@ -106,26 +107,38 @@ The component responsible for communicating with Tungsten Fabric is divided into
 
 Methods for all available operations implemented in OpenContrailDriversBase have names based on the following pattern:
 
-    * create_X
-    * get_X
-    * update_X
-    * delete_X
-    * get_Xs
-    * get_Xs_count
+* create_X
+* get_X
+* update_X
+* delete_X
+* get_Xs
+* get_Xs_count
 
 where X might be substituted with:
 
-    * network
-    * subnet
-    * router
-    * floatingip
-    * port
-    * security_group
-    * security_group_rule
-    * route_table
-    * nat_instance
+* network
+* subnet
+* router
+* floatingip
+* port
+* security_group
+* security_group_rule
+* route_table
+* nat_instance
 
 They are simply wrappers for backend requests implemented in OpenContrailDrivers.
 It should be noted that OpenContrailDrivers class appends "/neutron" suffix to an URL.
 This URL points to vnc_openstack server, so the OpenContrailDrivers can't be used to
 communicate with the ordinary REST API.
+
+Connectivity with Tungsten Fabric using contrail-api-client
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Some modules (like integration with Device Manager) need access to Tungsten
+Fabric in way that vnc_openstack is not designed to provide. In those cases,
+we use `contrail-api-client <vnc_pypi_>`_, a python library to connect with
+Contrail REST API and operate on Contrail VNC objects.
+
+This library is wrapped in a VncApiClient class, which connects to TF and
+provides methods to read, update and create required objects.
+
+.. _vnc_pypi: https://pypi.org/project/contrail-api-client/

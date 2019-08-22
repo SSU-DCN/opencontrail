@@ -33,6 +33,12 @@ class DeviceManagerIntegrator(object):
     It allows DM to properly configure physical devices inside Fabric.
     """
 
+    REQUIRED_PORT_FIELDS = [
+        'binding:host_id',
+        'device_id',
+        'device_owner',
+        'network_id']
+
     def __init__(self):
         self.tf_client = VncApiClient()
         self.bindings_helper = DmBindingsHelper(self.tf_client)
@@ -41,19 +47,25 @@ class DeviceManagerIntegrator(object):
         if self.enabled:
             self.bindings_helper.initialize()
 
-    def create_vlan_tagging_for_port(self, context, port):
-        if not self._check_should_be_tagged(port['port']):
+    def sync_vlan_tagging_for_port(self, context, port, previous_port):
+        if self._check_data_was_changed(port, previous_port):
+            self.delete_vlan_tagging_for_port(previous_port)
+
+        if not self._check_should_be_tagged(port):
+            host_id = port.get('binding:host_id')
+            LOG.debug("Compute '%s' is not managed by Device Manager or no "
+                      "connected VM. DM integration skipped. " % (host_id))
             return
 
-        network_id = port['port']['network_id']
+        network_id = port['network_id']
         vlan_tag = self._get_vlan_tag(context, network_id)
         if not vlan_tag:
             LOG.debug("No VLAN tag for port, binding for DM skipped.")
             return
 
         tf_project = self.tf_client.get_project(
-            str(uuid.UUID(port['port']['tenant_id'])))
-        vmi_name = self._make_vmi_name(port['port'])
+            str(uuid.UUID(port['tenant_id'])))
+        vmi_name = self._make_vmi_name(port)
         existing_vmi = self.tf_client.get_virtual_machine_interface(
             fq_name=tf_project.fq_name + [vmi_name])
 
@@ -68,16 +80,17 @@ class DeviceManagerIntegrator(object):
 
         properties = self.tf_client.make_vmi_properties_with_vlan_tag(vlan_tag)
         bindings = self.bindings_helper.get_bindings_for_host(
-            port['port']['binding:host_id'])
+            port['binding:host_id'])
         vmi = self.tf_client.make_virtual_machine_interface(
             vmi_name, tf_vn, properties, bindings, tf_project)
 
         self.tf_client.create_virtual_machine_interface(vmi)
-        LOG.debug("Created VMI with bindings for DM for port %s",
-                  port['port']['id'])
+        LOG.debug("Created VMI with bindings for DM for port %s", port['id'])
 
     def delete_vlan_tagging_for_port(self, port):
-        if not self._check_should_be_tagged(port):
+        if not self._check_contains_required_fields(port):
+            LOG.debug("Port %s cannot be VLAN-tagged. Trying to delete VMI for"
+                      "DM skipped" % port['id'])
             return
 
         tf_project = self.tf_client.get_project(
@@ -94,14 +107,27 @@ class DeviceManagerIntegrator(object):
             LOG.debug("Deleted VMI with bindings for DM for port %s" %
                       port['id'])
 
+    def _check_data_was_changed(self, current, previous):
+        for field in self.REQUIRED_PORT_FIELDS:
+            if current.get(field) != previous.get(field):
+                return True
+        return False
+
+    def _check_contains_required_fields(self, port):
+        for field in self.REQUIRED_PORT_FIELDS:
+            if field not in port:
+                return False
+        return True
+
     def _check_should_be_tagged(self, port):
+        if not self._check_contains_required_fields(port):
+            return False
+
         host_id = port.get('binding:host_id')
         device_id = port.get('device_id', None)
         compute_owner = port.get('device_owner', '').startswith('compute:')
         managed_host = self.bindings_helper.check_host_managed(host_id)
         if not managed_host or not device_id or not compute_owner:
-            LOG.debug("Compute '%s' is not managed by Device Manager or no "
-                      "connected VM. DM integration skipped. " % (host_id))
             return False
         return True
 

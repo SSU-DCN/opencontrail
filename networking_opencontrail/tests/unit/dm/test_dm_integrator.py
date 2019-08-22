@@ -75,7 +75,7 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
         helper().initialize.assert_called_once()
 
     @ddt.data(1, 100, 4094)
-    def test_create_tagging_for_port(self, vlan_tag):
+    def test_sync_create_tagging_for_port_on_plug_to_vm(self, vlan_tag):
         self._mock_core_get_network(segmentation_id=vlan_tag)
         self._mock_bindings_helper_check_host_managed()
         bindings = self._mock_bindings_helper_get_bindings()
@@ -85,10 +85,10 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
         tf_properties = self._mock_tf_client_make_vmi_properties()
         tf_created_vmi = self._mock_tf_client_make_vmi()
         context = self._get_fake_context()
-        port_data = self._get_port_data()
+        self.dm_integrator.delete_vlan_tagging_for_port = mock.Mock()
 
-        self.dm_integrator.create_vlan_tagging_for_port(
-            context, {'port': port_data})
+        self.dm_integrator.sync_vlan_tagging_for_port(
+            context, self._port_data, self._disconnected_port)
 
         expected_vmi_name = "_vlan_tag_for_vm_vm-1_vn_net-1"
         tf_expected_calls = [
@@ -110,74 +110,127 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
         ]
         self.bindings_helper.assert_has_calls(bindings_helper_expected_calls)
         self.core_plugin.get_network.assert_called_with(context, "net-1")
+        self.dm_integrator.delete_vlan_tagging_for_port.assert_called_with(
+            self._disconnected_port)
 
-    @ddt.data({'binding:host_id': 'not-managed', 'device_id': 'vm-1',
-               'device_owner': 'compute:nova'},
-              {'device_id': 'vm-1', 'device_owner': 'compute:nova'})
-    def test_not_created_tagging_when_node_not_managed(self, port_data):
+    @ddt.data('binding:host_id', 'device_id', 'device_owner', 'network_id')
+    def test_sync_recreate_vlan_tagging_on_port_change(self, updated_field):
+        """On update those fields, remove old and create new VMI"""
+        self._mock_core_get_network()
+        self._mock_bindings_helper_check_host_managed()
+        bindings = self._mock_bindings_helper_get_bindings()
+        self._mock_tf_client_get_vmi(None)
+        tf_project = self._mock_tf_client_get_project()
+        tf_vn = self._mock_tf_client_get_vn()
+        tf_properties = self._mock_tf_client_make_vmi_properties()
+        tf_created_vmi = self._mock_tf_client_make_vmi()
+        context = self._get_fake_context()
+        old_port = self._port_data
+        old_port[updated_field] = 'new-value'
+        self.dm_integrator.delete_vlan_tagging_for_port = mock.Mock()
+
+        self.dm_integrator.sync_vlan_tagging_for_port(
+            context, self._port_data, old_port)
+
+        expected_vmi_name = "_vlan_tag_for_vm_vm-1_vn_net-1"
+        tf_expected_calls = [
+            mock.call.get_project(
+                str(uuid.UUID("12345678123456781234567812345678"))),
+            mock.call.get_virtual_machine_interface(
+                fq_name=tf_project.fq_name + [expected_vmi_name]),
+            mock.call.get_virtual_network("net-1"),
+            mock.call.make_vmi_properties_with_vlan_tag(100),
+            mock.call.make_virtual_machine_interface(expected_vmi_name, tf_vn,
+                                                     tf_properties,
+                                                     bindings, tf_project),
+            mock.call.create_virtual_machine_interface(tf_created_vmi)
+        ]
+        self.tf_client.assert_has_calls(tf_expected_calls)
+        bindings_helper_expected_calls = [
+            mock.call.check_host_managed('compute1'),
+            mock.call.get_bindings_for_host('compute1')
+        ]
+        self.bindings_helper.assert_has_calls(bindings_helper_expected_calls)
+        self.core_plugin.get_network.assert_called_with(context, "net-1")
+        self.dm_integrator.delete_vlan_tagging_for_port.assert_called_with(
+            old_port)
+
+    @ddt.data('binding:host_id', 'device_id', 'device_owner', 'network_id')
+    def test_sync_not_create_tagging_when_incomplete_port(self, field):
+        context = self._get_fake_context()
+        self.dm_integrator.delete_vlan_tagging_for_port = mock.Mock()
+        port_data = self._port_data
+        del port_data[field]
+
+        self.dm_integrator.sync_vlan_tagging_for_port(context, port_data,
+                                                      self._disconnected_port)
+
+        self.dm_integrator.delete_vlan_tagging_for_port.assert_called_with(
+            self._disconnected_port)
+        self.tf_client.assert_not_called()
+        self.core_plugin.assert_not_called()
+
+    def test_sync_not_create_tagging_when_node_not_managed(self):
         context = self._get_fake_context()
         self._mock_bindings_helper_check_host_managed(False)
+        self.dm_integrator.delete_vlan_tagging_for_port = mock.Mock()
 
-        self.dm_integrator.create_vlan_tagging_for_port(
-            context, {'port': port_data})
+        self.dm_integrator.sync_vlan_tagging_for_port(
+            context, self._port_data, self._disconnected_port)
 
+        self.dm_integrator.delete_vlan_tagging_for_port.assert_called_with(
+            self._disconnected_port)
         self.bindings_helper.check_host_managed.assert_called_with(
-            port_data.get('binding:host_id'))
+            self._port_data.get('binding:host_id'))
         self.tf_client.assert_not_called()
         self.core_plugin.assert_not_called()
 
     @ddt.data(None, 0, 4095)
-    def test_not_created_tagging_when_invalid_vlan(self, invalid_tag):
+    def test_sync_not_create_tagging_when_invalid_vlan(self, invalid_tag):
         context = self._get_fake_context()
         self._mock_core_get_network(segmentation_id=invalid_tag)
         self._mock_bindings_helper_check_host_managed()
-        port_data = self._get_port_data()
+        self.dm_integrator.delete_vlan_tagging_for_port = mock.Mock()
 
-        self.dm_integrator.create_vlan_tagging_for_port(
-            context, {'port': port_data})
+        self.dm_integrator.sync_vlan_tagging_for_port(
+            context, self._port_data, self._disconnected_port)
 
+        self.dm_integrator.delete_vlan_tagging_for_port.assert_called_with(
+            self._disconnected_port)
         self.bindings_helper.check_host_managed.assert_called_with('compute1')
         self.core_plugin.get_network.assert_called_with(context, "net-1")
         self.tf_client.assert_not_called()
 
-    def test_not_created_tagging_when_network_not_vlan(self):
+    def test_sync_not_create_tagging_when_network_not_vlan(self):
         context = self._get_fake_context()
         self._mock_core_get_network(net_type='not-vlan')
         self._mock_bindings_helper_check_host_managed()
-        port_data = self._get_port_data()
+        self.dm_integrator.delete_vlan_tagging_for_port = mock.Mock()
 
-        self.dm_integrator.create_vlan_tagging_for_port(
-            context, {'port': port_data})
+        self.dm_integrator.sync_vlan_tagging_for_port(
+            context, self._port_data, self._disconnected_port)
 
+        self.dm_integrator.delete_vlan_tagging_for_port.assert_called_with(
+            self._disconnected_port)
         self.bindings_helper.check_host_managed.assert_called_with('compute1')
         self.core_plugin.get_network.assert_called_with(context, "net-1")
         self.tf_client.assert_not_called()
 
-    def test_not_created_tagging_when_no_device_id(self):
+    @ddt.data('network:router_interface', '', 'other:sth')
+    def test_sync_not_create_tagging_when_owner_not_compute(self, owner):
         self._mock_core_get_network()
         context = self._get_fake_context()
         self._mock_bindings_helper_check_host_managed()
-        port_data = self._get_port_data()
-        del port_data['device_id']
+        self.dm_integrator.delete_vlan_tagging_for_port = mock.Mock()
+        port_data = self._port_data
+        port_data['device_owner'] = owner
 
-        self.dm_integrator.create_vlan_tagging_for_port(
-            context, {'port': port_data})
+        self.dm_integrator.sync_vlan_tagging_for_port(
+            context, port_data, self._disconnected_port)
 
+        self.dm_integrator.delete_vlan_tagging_for_port.assert_called_with(
+            self._disconnected_port)
         self.bindings_helper.check_host_managed.assert_called_with('compute1')
-        self.tf_client.create_virtual_machine_interface.assert_not_called()
-
-    @ddt.data({'binding:host_id': 'compute-1', 'device_id': 'no-vm-1',
-               'device_owner': 'network:router_interface'},
-              {'binding:host_id': 'compute-1', 'device_id': 'no-vm-1'})
-    def test_not_created_tagging_when_invalid_device_owner(self, port_data):
-        self._mock_core_get_network()
-        context = self._get_fake_context()
-        self._mock_bindings_helper_check_host_managed()
-
-        self.dm_integrator.create_vlan_tagging_for_port(
-            context, {'port': port_data})
-
-        self.bindings_helper.check_host_managed.assert_called_with('compute-1')
         self.tf_client.create_virtual_machine_interface.assert_not_called()
 
     def test_not_created_tagging_when_vn_not_exists_in_tf(self):
@@ -187,10 +240,10 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
         self._mock_tf_client_get_vmi(None)
         tf_project = self._mock_tf_client_get_project()
         self._mock_tf_client_get_vn(no_vn=True)
-        port_data = self._get_port_data()
+        self.dm_integrator.delete_vlan_tagging_for_port = mock.Mock()
 
-        self.dm_integrator.create_vlan_tagging_for_port(
-            context, {'port': port_data})
+        self.dm_integrator.sync_vlan_tagging_for_port(
+            context, self._port_data, self._disconnected_port)
 
         expected_vmi_name = '_vlan_tag_for_vm_vm-1_vn_net-1'
         tf_expected_calls = [
@@ -205,18 +258,21 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
         self.tf_client.create_virtual_machine_interface.assert_not_called()
         self.bindings_helper.check_host_managed.assert_called_with('compute1')
         self.core_plugin.get_network.assert_called_with(context, "net-1")
+        self.dm_integrator.delete_vlan_tagging_for_port.assert_called_with(
+            self._disconnected_port)
 
-    def test_use_existing_vmi_on_create_tagging(self):
+    def test_use_existing_vmi_on_sync_tagging_when_no_changes(self):
         self._mock_core_get_network()
         self._mock_bindings_helper_check_host_managed()
         existing_vmi = mock.Mock()
         self._mock_tf_client_get_vmi(existing_vmi)
         tf_project = self._mock_tf_client_get_project()
         context = self._get_fake_context()
-        port_data = self._get_port_data()
+        self.dm_integrator.delete_vlan_tagging_for_port = mock.Mock()
 
-        self.dm_integrator.create_vlan_tagging_for_port(
-            context, {'port': port_data})
+        self.dm_integrator.sync_vlan_tagging_for_port(context,
+                                                      self._port_data,
+                                                      self._port_data)
 
         expected_vmi_name = "_vlan_tag_for_vm_vm-1_vn_net-1"
         tf_expected_calls = [
@@ -228,14 +284,27 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
         self.bindings_helper.check_host_managed.assert_called_with('compute1')
         self.core_plugin.get_network.assert_called_with(context, "net-1")
         self.tf_client.create_virtual_machine_interface.assert_not_called()
+        self.dm_integrator.delete_vlan_tagging_for_port.assert_not_called()
 
-    def test_delete_tagging(self):
+    def test_sync_only_call_delete_tagging_on_disconnect(self):
         self._mock_bindings_helper_check_host_managed()
         existing_vmi, vpg = self._mock_tf_client_vmi_with_vpg()
-        tf_project = self._mock_tf_client_get_project()
-        port_data = self._get_port_data()
+        context = self._get_fake_context()
+        self.dm_integrator.delete_vlan_tagging_for_port = mock.Mock()
 
-        self.dm_integrator.delete_vlan_tagging_for_port(port_data)
+        self.dm_integrator.sync_vlan_tagging_for_port(context,
+                                                      self._disconnected_port,
+                                                      self._port_data)
+
+        self.dm_integrator.delete_vlan_tagging_for_port.assert_called_with(
+            self._port_data)
+        self.tf_client.create_virtual_machine_interface.assert_not_called()
+
+    def test_delete_tagging(self):
+        existing_vmi, vpg = self._mock_tf_client_vmi_with_vpg()
+        tf_project = self._mock_tf_client_get_project()
+
+        self.dm_integrator.delete_vlan_tagging_for_port(self._port_data)
 
         expected_vmi_name = "_vlan_tag_for_vm_vm-1_vn_net-1"
         vmi_fq_name = tf_project.fq_name + [expected_vmi_name]
@@ -249,15 +318,12 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
             mock.call.delete_virtual_machine_interface(fq_name=vmi_fq_name)]
         self.tf_client.assert_has_calls(tf_expected_calls)
         vpg.del_virtual_machine_interface.assert_called_with(existing_vmi)
-        self.bindings_helper.check_host_managed.assert_called_with('compute1')
 
     def test_delete_tagging_when_no_vpg_refs(self):
-        self._mock_bindings_helper_check_host_managed()
         self._mock_tf_client_vmi_without_vpg()
         tf_project = self._mock_tf_client_get_project()
-        port_data = self._get_port_data()
 
-        self.dm_integrator.delete_vlan_tagging_for_port(port_data)
+        self.dm_integrator.delete_vlan_tagging_for_port(self._port_data)
 
         expected_vmi_name = "_vlan_tag_for_vm_vm-1_vn_net-1"
         vmi_fq_name = tf_project.fq_name + [expected_vmi_name]
@@ -269,38 +335,21 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
             mock.call.delete_virtual_machine_interface(fq_name=vmi_fq_name)]
         self.tf_client.assert_has_calls(tf_expected_calls)
         self.tf_client.get_virtual_port_group.assert_not_called()
-        self.bindings_helper.check_host_managed.assert_called_with('compute1')
 
-    @ddt.data({'binding:host_id': 'not-managed', 'device_id': 'vm-1',
-               'device_owner': 'compute:nova'},
-              {'device_id': 'vm-1', 'device_owner': 'compute:nova'})
-    def test_not_try_delete_tagging_when_node_not_managed(self, port_data):
-        self._mock_bindings_helper_check_host_managed(False)
+    @ddt.data('binding:host_id', 'device_id', 'device_owner', 'network_id')
+    def test_not_try_delete_tagging_when_incomplete_port_dict(self, field):
+        port_data = self._port_data
+        del port_data[field]
 
         self.dm_integrator.delete_vlan_tagging_for_port(port_data)
 
-        self.bindings_helper.check_host_managed.assert_called_with(
-            port_data.get('binding:host_id'))
-        self.tf_client.assert_not_called()
-
-    @ddt.data({'binding:host_id': 'compute-1', 'device_id': 'no-vm-1',
-               'device_owner': 'network:router_interface'},
-              {'binding:host_id': 'compute-1', 'device_id': 'no-vm-1'})
-    def test_not_try_delete_tagging_when_invalid_device_owner(self, port_data):
-        self._mock_bindings_helper_check_host_managed(False)
-
-        self.dm_integrator.delete_vlan_tagging_for_port(port_data)
-
-        self.bindings_helper.check_host_managed.assert_called_with('compute-1')
         self.tf_client.assert_not_called()
 
     def test_not_try_delete_tagging_when_no_vmi(self):
-        self._mock_bindings_helper_check_host_managed()
         self._mock_tf_client_get_vmi(None)
         tf_project = self._mock_tf_client_get_project()
-        port_data = self._get_port_data()
 
-        self.dm_integrator.delete_vlan_tagging_for_port(port_data)
+        self.dm_integrator.delete_vlan_tagging_for_port(self._port_data)
 
         expected_vmi_name = "_vlan_tag_for_vm_vm-1_vn_net-1"
         vmi_fq_name = tf_project.fq_name + [expected_vmi_name]
@@ -311,9 +360,9 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
                 fq_name=vmi_fq_name)]
         self.tf_client.assert_has_calls(tf_expected_calls)
         self.tf_client.delete_virtual_machine_interface.assert_not_called()
-        self.bindings_helper.check_host_managed.assert_called_with('compute1')
 
-    def _get_port_data(self):
+    @property
+    def _port_data(self):
         port_data = {'network_id': 'net-1',
                      'binding:host_id': 'compute1',
                      'device_id': 'vm-1',
@@ -322,10 +371,15 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
                      'id': 'port-1'}
         return port_data
 
-    def _get_topology(self):
-        switch_port = {'name': 'ens1f1', 'switch_name': 'leaf1',
-                       'port_name': 'xe-0/0/1'}
-        return {'nodes': [{'name': 'compute1', 'ports': [switch_port]}]}
+    @property
+    def _disconnected_port(self):
+        port_data = {'network_id': '',
+                     'binding:host_id': '',
+                     'device_id': '',
+                     'device_owner': '',
+                     'tenant_id': '12345678123456781234567812345678',
+                     'id': 'port-1'}
+        return port_data
 
     def _get_fake_context(self, **kwargs):
         return mock.Mock(**kwargs)

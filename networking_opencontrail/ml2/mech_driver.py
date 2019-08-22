@@ -151,8 +151,8 @@ class OpenContrailMechDriver(api.MechanismDriver):
             self.drv.update_port(context._plugin_context,
                                  port['port']['id'], port)
             if self.dm_integrator.enabled:
-                self.dm_integrator.create_vlan_tagging_for_port(
-                    context._plugin_context, port)
+                self.dm_integrator.sync_vlan_tagging_for_port(
+                    context._plugin_context, context.current, context.original)
         except Exception:
             LOG.exception("Update port Failed")
 

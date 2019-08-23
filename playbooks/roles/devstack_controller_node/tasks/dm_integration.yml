@@ -1,0 +1,14 @@
+---
+- name: Ensure destinantion directory for topology file exists
+  become: yes
+  file:
+    path: "{{ dm_topology_file | dirname }}"
+    state: directory
+  when: dm_topology_file is not none
+
+- name: Put topology file
+  become: yes
+  copy:
+    src: topology.yaml
+    dest: "{{ dm_topology_file }}"
+  when: dm_topology_file is not none

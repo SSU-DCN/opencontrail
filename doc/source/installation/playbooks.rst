@@ -94,7 +94,17 @@ from the ``compute`` group will be a OpenStack computes.
 * ``contrail_interface`` should be interface name that has bound contrail ip.
 
 * ``openstack_branch`` should be set to ``master``
-* ``install_networking_bgpvpn_plugin`` is a boolean value. If set true, it will install the neutron_bgpvpn plugin.
+* ``install_networking_bgpvpn_plugin`` is a boolean value. If set true, it will
+  install the neutron_bgpvpn plugin.
+
+Next, there are variable useful if you want to enable integration with Device
+Manager. Note that playbooks don't onboard fabric.
+
+* ``dm_integration_enabled`` is boolean and when set true, DM integration will
+  be enabled and encapsulation priority in vRouter set to required value.
+* ``dm_topology_file`` is a place for path to file with topology on controller.
+  When set, file `topology.yaml` from `playbooks/files` is copied to this
+  location and plugin is configured to use them.
 
 Last variables provide some useful options to configure VMs:
 
@@ -125,6 +135,14 @@ Last variables provide some useful options to configure VMs:
 
     # If true, then install networking_bgpvpn plugin with contrail driver
     install_networking_bgpvpn_plugin: false
+
+    # If true, integration with Device Manager will be enabled and vRouter
+    # encapsulation priorities will be set to 'VXLAN,MPLSoUDP,MPLSoGRE'.
+    dm_integration_enabled: false
+
+    # Optional path to file with topology for DM integration. When set and
+    # DM integration enabled, topology.yaml file will be copied to this location
+    dm_topology_file:
 
     # If true, password to the created instances for current ansible user
     # will be set to value of instance_password

@@ -37,6 +37,9 @@ ML2_L3_PLUGIN=opencontrail-router
 OPENCONTRAIL_APISERVER_IP={{ contrail_ip }}
 OPENCONTRAIL_APISERVER_PORT=8082
 
+OPENCONTRAIL_DM_ENABLED={{ dm_integration_enabled }}
+OPENCONTRAIL_DM_TOPOLOGY={{ dm_topology_file }}
+
 NOVNCPROXY_URL="http://{{ hostvars['controller'].ansible_host }}:6080/vnc_lite.html"
 
 enable_plugin networking-opencontrail https://git.openstack.org/openstack/networking-opencontrail $USE_BRANCH

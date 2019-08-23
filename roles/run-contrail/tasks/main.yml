@@ -33,6 +33,10 @@
     name:
       - git+https://github.com/Juniper/contrail-controller.git#subdirectory=src/vnsw/contrail-vrouter-api/
       - git+https://github.com/Juniper/contrail-nova-vif-driver.git
+  retries: 3
+  delay: 3
+  register: result
+  until: result is succeeded
 
 - name: Run contrail-status
   shell: |

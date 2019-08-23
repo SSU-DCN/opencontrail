@@ -1,0 +1,8 @@
+# This is example topology file for DM integration. When dm_topology_file var
+# is set, this file is copied to destination provided by value of it. 
+# nodes:
+#   - name: compute-host-1
+#     ports:
+#       - switch_name: qfx-1
+#         port_name: xe-0/0/1
+nodes: []

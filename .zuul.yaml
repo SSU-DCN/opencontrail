@@ -164,6 +164,7 @@
               mechanism_drivers: opencontrail,openvswitch,linuxbridge
             ml2_type_vlan:
               network_vlan_ranges: public:1:1000
+      dm_integration_enabled: false
 
 - job:
     name: noc-integration

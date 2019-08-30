@@ -2,13 +2,13 @@
 - name: Install required utilities
   become: yes
   yum:
-    name: "{{ item }}"
+    name:
+      - lvm2
+      - git
+      - python
+      - epel-release
     state: present
-  with_items:
-    - git
-    - python
-    - epel-release
-
+    
 - name: Install pip
   become: yes
   yum:
@@ -26,11 +26,3 @@
     version: "{{ openstack_branch }}"
     accept_hostkey: yes
     force: yes
-
-- name: Put local.conf
-  template:
-    src: controller_local.conf.j2
-    dest: ~/devstack/local.conf
-
-- include: dm_integration.yml
-  when: dm_integration_enabled

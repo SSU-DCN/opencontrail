@@ -40,6 +40,13 @@
     [DEFAULT]
     network_scheduler_driver = networking_opencontrail.agents.dhcp_scheduler.TFIgnoreDHCPScheduler
 
+#. If you want to enable integration with Device Manager and set path to
+   topology file, set additional variables like::
+
+     > cat local.conf
+     [[local|localrc]]
+     OPENCONTRAIL_DM_ENABLED=True
+     OPENCONTRAIL_DM_TOPOLOGY=/etc/neutron/topology.yaml
 
 #. Optionally, if you need to use secure SSL connection, specify additional
    configuration variables as below::

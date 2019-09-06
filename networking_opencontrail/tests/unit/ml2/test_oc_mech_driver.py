@@ -286,8 +286,9 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
                 port_context._plugin_context, port_id, port))
 
         mech_driver.drv.assert_has_calls(expected_calls)
-        self.drv.dm_integrator.create_vlan_tagging_for_port.assert_called_with(
-            port_context._plugin_context, port)
+        self.drv.dm_integrator.sync_vlan_tagging_for_port.assert_called_with(
+            port_context._plugin_context, port_context.current,
+            port_context.original)
 
     def test_create_port_omit_callback(self):
         network_id = 'test_net1'

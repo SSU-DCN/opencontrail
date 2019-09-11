@@ -67,7 +67,7 @@ Assume that the Kolla was deployed using this guide: `kolla_quickstart`_.
 
 #. Install plugin into neutron_server docker container::
 
-    docker exec -it neutron_server git clone https://github.com/openstack/networking-opencontrail.git /tmp/networking-opencontrail
+    docker exec -it neutron_server git clone https://opendev.org/x/networking-opencontrail.git /tmp/networking-opencontrail
     docker exec -u 0 -it neutron_server bash -c 'cd /tmp/networking-opencontrail; python setup.py install'
 
 #. Edit section Default in ``/etc/kolla/neutron-server/neutron.conf``:

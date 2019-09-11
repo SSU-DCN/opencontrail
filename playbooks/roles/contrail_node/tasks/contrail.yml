@@ -2,15 +2,14 @@
 - name: Install required utilities
   become: yes
   yum:
-    name: "{{ item }}"
-    state: present
-  with_items:
+    name: 
       - python-devel
       - epel-release
       - gcc
       - git
       - ansible-2.4.*
       - yum-utils
+    state: present      
 
 - name: Install pip
   become: yes
@@ -45,12 +44,11 @@
 
 - name: install docker and docker-compose for python
   pip:
-    name: "{{ item }}"
+    name:
+      - docker-py==1.10.6
+      - docker-compose==1.9.0
     state: present
     extra_args: --user
-  with_items:
-    - docker-py==1.10.6
-    - docker-compose==1.9.0
 
 # Dirty ugly workaround on contrail-ansible-deployer not using 'become' in playbooks
 - name: Create directories for contrail
@@ -137,7 +135,7 @@
   become: yes
   pip:
     name:
-      - numpy==1.16. # Required as long as we use Python 2: newer versions broken Python 2 support
+      - numpy==1.16.5 # Required as long as we use Python 2: newer versions broken Python 2 support
       - git+https://github.com/Juniper/contrail-controller.git#subdirectory=src/vnsw/contrail-vrouter-api/
       - git+https://github.com/Juniper/contrail-nova-vif-driver.git
   retries: 3

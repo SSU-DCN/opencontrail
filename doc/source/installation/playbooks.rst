@@ -46,11 +46,6 @@ Let's assume there are two hosts:
     $ ssh 10.100.0.2
     $ ssh 10.100.0.3
 
-.. important::
-
-    The SSH access must be available also between compute and controller hosts.
-
-
 **3. Install Ansible on your host**
 
 It is required to install Ansible in version 2.5 or higher.

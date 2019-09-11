@@ -1,0 +1,5 @@
+---
+- name: Put local.conf
+  template:
+    src: compute_local.conf.j2
+    dest: ~/devstack/local.conf

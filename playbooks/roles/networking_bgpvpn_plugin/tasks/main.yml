@@ -2,10 +2,9 @@
 - name: Install system requirements
   become: yes
   apt:
-    name: "{{ item }}"
+    name:
+      - python-pip
     state: present
-  with_items:
-    - python-pip
 
 - name: Update local.conf with enabling plugin
   lineinfile:
@@ -67,9 +66,8 @@
 
 - name: install dependencies
   pip:
-    name: "{{ item }}"
+    name:
+      - '/tmp/cfgm_common-0.1.dev0.tar.gz'
+      - '/tmp/vnc_api-5.0.0.tar.gz'
+      - 'git+git://github.com/Juniper/contrail-neutron-plugin.git#egg=neutron_plugin_contrail'
   become: yes
-  with_items:
-    - '/tmp/cfgm_common-0.1.dev0.tar.gz'
-    - '/tmp/vnc_api-5.0.0.tar.gz'
-    - 'git+git://github.com/Juniper/contrail-neutron-plugin.git#egg=neutron_plugin_contrail'

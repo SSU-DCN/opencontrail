@@ -31,6 +31,7 @@ Manual configuration
    Example:
 
    .. literalinclude:: samples/neutron.conf.sample
+      :language: ini
 
 #. Edit ``/etc/neutron/plugins/ml2/ml2_conf.ini`` file:
 
@@ -39,11 +40,21 @@ Manual configuration
    After editing file should look similarly to this:
 
    .. literalinclude:: samples/ml2_conf.ini.sample
+      :language: ini
 
 #. Create a new file ``/etc/neutron/plugins/ml2/ml2_conf_opencontrail.ini``
    and write an IP and a port of the Tungsten Fabric REST API to meet the example:
 
    .. literalinclude:: samples/ml2_conf_opencontrail.ini.sample
+      :language: ini
+      :lines: 1-3
+
+#. If you want to use integration with Device Manager, enable it in the same
+   file (see :doc:`device_manager` for details) like:
+
+   .. literalinclude:: samples/ml2_conf_opencontrail.ini.sample
+      :language: ini
+      :lines: 5-7
 
 #. Make sure you include all config files in the Neutron server parameters::
 
@@ -73,26 +84,37 @@ Assume that the Kolla was deployed using this guide: `kolla_quickstart`_.
 #. Edit section Default in ``/etc/kolla/neutron-server/neutron.conf``:
 
    .. literalinclude:: samples/neutron.conf.sample
+      :language: ini
 
 #. Edit section ml2 in ``/etc/kolla/neutron-server/ml2_conf.ini``:
 
    .. literalinclude:: samples/ml2_conf.ini.sample
+      :language: ini
 
 #. Add file ``/etc/kolla/neutron-server/ml2_conf_opencontrail.ini``:
 
    .. literalinclude:: samples/ml2_conf_opencontrail.ini.sample
+      :language: ini
+      :lines: 1-3
+
+#. If you want to use an integration with Device Manager, enable it in the same
+   file (see :doc:`device_manager` for details) like:
+
+   .. literalinclude:: samples/ml2_conf_opencontrail.ini.sample
+      :language: ini
+      :lines: 5-7
 
 #. Edit ``/etc/kolla/neutron-server/config.json``:
 
-    #. Add ``--config-file /etc/neutron/ml2_conf_opencontrail.ini`` at the end of neutron-server command
-    #. Add ``ml2_conf_opencontrail.ini`` to config files ::
+   #. Add ``--config-file /etc/neutron/ml2_conf_opencontrail.ini`` at the end of neutron-server command
+   #. Add ``ml2_conf_opencontrail.ini`` to config files::
 
-        "config_files": [
+            "config_files": [
             {
-                "source": "/var/lib/kolla/config_files/ml2_conf_opencontrail.ini",
-                "dest": "/etc/neutron/ml2_conf_opencontrail.ini",
-                "owner": "neutron",
-                "perm": "0600"
+                  "source": "/var/lib/kolla/config_files/ml2_conf_opencontrail.ini",
+                  "dest": "/etc/neutron/ml2_conf_opencontrail.ini",
+                  "owner": "neutron",
+                  "perm": "0600"
             },
 
 #. Restart neutron::

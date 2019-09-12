@@ -19,6 +19,7 @@ Contents
    devstack
    usage
    flavors
+   device_manager
    architecture/index
    troubleshooting
    contributing

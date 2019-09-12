@@ -15,20 +15,19 @@
 
 from jsonschema import validate
 from jsonschema import ValidationError
-from oslo_config import cfg
 
 import yaml
 
 
 class DmTopologyLoader(object):
 
+    def __init__(self, path):
+        self.path = path
+
     def load(self):
-        if cfg.CONF.DM_INTEGRATION.topology:
-            topology = self._load_yaml_file(cfg.CONF.DM_INTEGRATION.topology)
-            self.validate(topology)
-            return topology
-        else:
-            return None
+        topology = self._load_yaml_file(self.path)
+        self.validate(topology)
+        return {node['name']: node for node in topology['nodes']}
 
     def validate(self, config):
         self._validate_schema(config)

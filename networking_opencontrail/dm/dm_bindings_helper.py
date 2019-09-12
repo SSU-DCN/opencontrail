@@ -14,9 +14,11 @@
 #
 import json
 
+from oslo_config import cfg
 from oslo_log import log as logging
 
-from networking_opencontrail.dm.dm_topology import DmTopology
+from networking_opencontrail.dm.dm_topology import DmTopologyApi
+from networking_opencontrail.dm.dm_topology import DmTopologyFile
 
 LOG = logging.getLogger(__name__)
 
@@ -32,7 +34,11 @@ class DmBindingsHelper(object):
 
     def __init__(self, tf_client):
         self.tf_client = tf_client
-        self.topology = DmTopology(self.tf_client)
+        topology_file = cfg.CONF.DM_INTEGRATION.topology
+        if topology_file:
+            self.topology = DmTopologyFile(self.tf_client)
+        else:
+            self.topology = DmTopologyApi(self.tf_client)
 
     def initialize(self):
         self.topology.initialize()

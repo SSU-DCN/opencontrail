@@ -163,7 +163,7 @@
               extension_drivers: port_security
               mechanism_drivers: opencontrail,openvswitch,linuxbridge
             ml2_type_vlan:
-              network_vlan_ranges: public:1:1000
+              network_vlan_ranges: public:1:1000,vhost:1:1000
       dm_integration_enabled: false
 
 - job:
@@ -172,7 +172,10 @@
     description: Integration tests between devstack and opencontrail
     run: playbooks/zuul/noc-integration.yaml
     vars:
+      devstack_localrc:
+        OPENCONTRAIL_DM_ENABLED: true
       tox_envlist: integration
+      dm_integration_enabled: true
     post-run: playbooks/zuul/post-integration.yaml
 
 - job:

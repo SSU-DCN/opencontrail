@@ -48,12 +48,16 @@ PHYSICAL_NETWORK=vhost
 TENANT_VLAN_RANGE=1:4094
 Q_ML2_TENANT_NETWORK_TYPE=vlan
 Q_ML2_PLUGIN_MECHANISM_DRIVERS=opencontrail
+Q_USE_PROVIDERNET_FOR_PUBLIC=True
+OVS_PHYSICAL_BRIDGE=br-ex
+PUBLIC_BRIDGE=br-ex
+OVS_BRIDGE_MAPPINGS=public:br-ex
 
 [[post-config|$NEUTRON_CORE_PLUGIN_CONF]]
 [ml2]
 type_drivers = local,vlan,gre,vxlan
 tenant_network_types = local,vlan
-mechanism_drivers = opencontrail
+mechanism_drivers = opencontrail,openvswitch
 extension_drivers = port_security
 
 [[post-config|$NEUTRON_CONF]]

@@ -32,7 +32,7 @@ class TestDmTopologyLoader(base.TestCase):
                 DM_INTEGRATION=mock.MagicMock(topology=None))
     def setUp(self, conf):
         super(TestDmTopologyLoader, self).setUp()
-        self.dm_topology_loader = dm_topology_loader.DmTopologyLoader()
+        self.dm_topology_loader = dm_topology_loader.DmTopologyLoader('path/')
 
     @mock.patch("oslo_config.cfg.CONF",
                 DM_INTEGRATION=mock.MagicMock(topology='path/'))
@@ -42,8 +42,9 @@ class TestDmTopologyLoader(base.TestCase):
             return_value=yaml_file)
 
         actual = self.dm_topology_loader.load()
+        expected = {node['name']: node for node in yaml_file['nodes']}
 
-        self.assertEqual(yaml_file, actual)
+        self.assertEqual(actual, expected)
         self.dm_topology_loader._load_yaml_file.assert_called_with('path/')
 
     @mock.patch("oslo_config.cfg.CONF")
@@ -81,15 +82,6 @@ class TestDmTopologyLoader(base.TestCase):
         config.DM_INTEGRATION.topology = '/file_does_not_exist'
 
         self.assertRaises(IOError, self.dm_topology_loader.load)
-
-    @mock.patch("oslo_config.cfg.CONF")
-    def test_no_file_path_should_return_none(self, config):
-        config.DM_INTEGRATION = mock.Mock()
-        config.DM_INTEGRATION.topology = None
-
-        actual = self.dm_topology_loader.load()
-
-        self.assertIsNone(actual)
 
     @mock.patch("oslo_config.cfg.CONF")
     @mock.patch("networking_opencontrail.dm.dm_topology_loader.yaml")

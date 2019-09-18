@@ -21,7 +21,7 @@ from networking_opencontrail.dm.dm_bindings_helper import DmBindingsHelper
 from networking_opencontrail.dm.dm_bindings_helper import FabricNotFoundError
 from networking_opencontrail.dm.dm_bindings_helper import \
     PhysicalInterfaceNotFoundError
-from networking_opencontrail.dm.dm_topology import DmTopology
+from networking_opencontrail.dm.dm_topology import DmTopologyFile
 from networking_opencontrail.drivers.vnc_api_driver import VncApiClient
 from networking_opencontrail.tests import base
 
@@ -29,21 +29,19 @@ from networking_opencontrail.tests import base
 @ddt.ddt
 class DmBindingsHelperTestCase(base.TestCase):
     @mock.patch("oslo_config.cfg.CONF")
-    @mock.patch("networking_opencontrail.dm.dm_bindings_helper.DmTopology")
+    @mock.patch("networking_opencontrail.dm.dm_bindings_helper.DmTopologyFile")
     def setUp(self, topology, config):
         super(DmBindingsHelperTestCase, self).setUp()
         self.tf_client = mock.Mock(spec_set=VncApiClient())
-        self.dm_topology = mock.Mock(spec_set=DmTopology)
+        self.dm_topology = mock.Mock(spec_set=DmTopologyFile)
         topology.return_value = self.dm_topology
 
         self.helper = DmBindingsHelper(self.tf_client)
         self.helper.initialize()
 
-        def tearDown(self):
-            super(DmBindingsHelperTestCase, self).tearDown()
-
-    @mock.patch("networking_opencontrail.dm.dm_bindings_helper.DmTopology")
-    def test_topology_is_initialized_on_initializing(self, topology):
+    @mock.patch("oslo_config.cfg.CONF")
+    @mock.patch("networking_opencontrail.dm.dm_bindings_helper.DmTopologyFile")
+    def test_topology_is_initialized_on_initializing(self, topology, config):
         helper = DmBindingsHelper(self.tf_client)
 
         helper.initialize()

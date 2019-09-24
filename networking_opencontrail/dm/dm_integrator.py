@@ -15,6 +15,7 @@
 
 import uuid
 
+from neutron_lib import constants
 from neutron_lib.plugins import directory
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -125,7 +126,8 @@ class DeviceManagerIntegrator(object):
 
         host_id = port.get('binding:host_id')
         device_id = port.get('device_id', None)
-        compute_owner = port.get('device_owner', '').startswith('compute:')
+        compute_owner = port.get('device_owner', '').startswith(
+            constants.DEVICE_OWNER_COMPUTE_PREFIX)
         managed_host = self.bindings_helper.check_host_managed(host_id)
         if not managed_host or not device_id or not compute_owner:
             return False
@@ -144,7 +146,8 @@ class DeviceManagerIntegrator(object):
         vlan_tag = network.get('provider:segmentation_id', 0)
         network_type = network.get('provider:network_type', '')
 
-        if network_type == 'vlan' and (0 < vlan_tag < 4095):
+        if network_type == constants.TYPE_VLAN and (
+            constants.MIN_VLAN_TAG <= vlan_tag <= constants.MAX_VLAN_TAG):
             return vlan_tag
         return None
 

@@ -50,7 +50,7 @@ class DeviceManagerIntegrator(object):
 
     def sync_vlan_tagging_for_port(self, context, port, previous_port):
         if self._check_data_was_changed(port, previous_port):
-            self.delete_vlan_tagging_for_port(previous_port)
+            self.delete_vlan_tagging_for_port(context, previous_port)
 
         if not self._check_should_be_tagged(port):
             host_id = port.get('binding:host_id')
@@ -88,7 +88,7 @@ class DeviceManagerIntegrator(object):
         self.tf_client.create_virtual_machine_interface(vmi)
         LOG.debug("Created VMI with bindings for DM for port %s", port['id'])
 
-    def delete_vlan_tagging_for_port(self, port):
+    def delete_vlan_tagging_for_port(self, context, port):
         if not self._check_contains_required_fields(port):
             LOG.debug("Port %s cannot be VLAN-tagged. Trying to delete VMI for"
                       "DM skipped" % port['id'])
@@ -101,7 +101,13 @@ class DeviceManagerIntegrator(object):
         existing_vmi = self.tf_client.get_virtual_machine_interface(
             fq_name=vmi_fq_name)
 
-        if existing_vmi:
+        vmi_ports = self._core_plugin.get_ports(
+            context, filters={
+                'network_id': [port['network_id']],
+                'binding:host_id': [port['binding:host_id']]})
+        are_ports_assigned = any(
+            port for port in vmi_ports if self._check_should_be_tagged(port))
+        if existing_vmi and not are_ports_assigned:
             self._detach_vmi_from_vpg(existing_vmi)
             self.tf_client.delete_virtual_machine_interface(
                 fq_name=vmi_fq_name)
@@ -154,8 +160,9 @@ class DeviceManagerIntegrator(object):
     @staticmethod
     def _make_vmi_name(port):
         network_id = port['network_id']
-        device_id = port['device_id']
-        vmi_name = "_vlan_tag_for_vm_%s_vn_%s" % (device_id, network_id)
+        device_id = port['binding:host_id']
+        vmi_name = "_vlan_tag_for_vn_{}_compute_{}".format(
+            network_id, device_id)
         return vmi_name
 
     @property

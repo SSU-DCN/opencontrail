@@ -3,11 +3,13 @@ Setup development VMs
 =====================
 
 Repository contains Ansible playbooks to automate creating development
-environment. They are designed to setup two nodes. The first node
+environment. They are designed to setup at least two nodes. The first node
 contains OpenStack with keystone, neutron, horizon, etc.
 It has also networking-opencontrail plugin as neutron ML2 plugin
 and service plugin for L3 driver. A second node contains nightly-build
 contrail node with simple devstack as compute node.
+Any number of nodes may be added as additional compute nodes.
+Connectivity with those additional nodes bases on OpenVSwitch.
 
 Playbooks deploy OpenStack in master version and OpenContrail in one of the latest nightly build.
 
@@ -29,14 +31,16 @@ Before you run playbooks perform the following steps:
 
 **1. Prepare machines for Contrail and OpenStack nodes.**
 
-Let's assume there are two hosts:
+Let's assume there are three hosts:
 
 +-----------+--------------+--------------------------+------------+-------------+----------------------------------------+
 | Node      | OS           | Recommended requirements | Public IP  | Internal IP | Notes                                  |
 +===========+==============+==========================+============+=============+========================================+
 | openstack | Ubuntu 16.04 | RAM: 8 GB                | 10.100.0.3 | 192.168.0.3 | devstack (controller node)             |
 +-----------+--------------+--------------------------+------------+-------------+----------------------------------------+
-| contrail  | CentOS 7.4   | RAM: 16 GB               | 10.100.0.2 | 192.168.0.2 | opencontrail + devstack (compute node) |
+| contrail  | CentOS 7.5   | RAM: 16 GB               | 10.100.0.2 | 192.168.0.2 | opencontrail + devstack (compute node) |
++-----------+--------------+--------------------------+------------+-------------+----------------------------------------+
+| compute   | CentOS 7.5   | RAM: 8 GB                | 10.100.0.4 | 192.168.0.4 | devstack, OVS-only compute             |
 +-----------+--------------+--------------------------+------------+-------------+----------------------------------------+
 
 **2. Make sure you have key-based SSH access to prepared nodes**
@@ -45,6 +49,7 @@ Let's assume there are two hosts:
 
     $ ssh 10.100.0.2
     $ ssh 10.100.0.3
+    $ ssh 10.100.0.4
 
 **3. Install Ansible on your host**
 
@@ -65,7 +70,9 @@ Configuration require editing few files before running any playbook.
 
 **1. Define nodes by specifying SSH names or IP of machines in playbooks/hosts**
 
-Change ``contrail-node`` and ``openstack-node`` to public IP of your machines.
+Set contrail node, openstack node and all other compute nodes ``ansible_host``
+to public IP of your machines. Then for compute nodes set ``local_ip`` to
+it's internal IP address.
 
 .. code-block:: text
 
@@ -76,11 +83,14 @@ Change ``contrail-node`` and ``openstack-node`` to public IP of your machines.
     contrail_controller ansible_host=10.100.0.2 ansible_user=centos
 
     [compute]
-    10.100.0.2 ansible_user=centos
+    contrail_controller local_ip=192.168.0.2
+    compute ansible_host=10.100.0.4 ansible_user=centos local_ip=192.168.0.4
 
 The ``controller`` host is a machine to install OpenStack controller.
 On ``contrail_controller``, the OpenConrail will be installed. All hosts
 from the ``compute`` group will be a OpenStack computes.
+Each compute is required to define ``local_ip`` variable with it's intenal ip
+address.
 
 **2. Change deployment variables in playbooks/group_vars/all.yml**
 
@@ -176,6 +186,16 @@ by following command: ``less +F -R /opt/stack/logs/stack.sh.log``
 *****
 Usage
 *****
+
+Create availability groups
+==========================
+
+Currently all openvswitch based nodes (eg additional computes) should be put in separate
+availability group.
+If any additional hosts were provisioned,
+in devstack UI should be manually created additional host aggregate using ``ovs`` availability zone,
+and all compute hosts that are not ``contrail_controller`` node should be moved there.
+
 
 Access web interface
 ====================

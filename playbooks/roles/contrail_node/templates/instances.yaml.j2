@@ -4,7 +4,7 @@ provider_config:
     ssh_public_key: ~/.ssh/centos_rsa.pub
     ssh_private_key: ~/.ssh/centos_rsa
     ntpserver: 0.pool.ntp.org
-    nameserer: 8.8.8.8
+    nameserver: 8.8.8.8
 
 instances:
   bms1:
@@ -22,7 +22,7 @@ global_configuration:
 
 contrail_configuration:
   CONTRAIL_VERSION: {{ contrail_version }}
-  CLOUD_ORCHESTRATOR: None
+  CLOUD_ORCHESTRATOR: none
   LOG_LEVEL: SYS_DEBUG
   AAA_MODE: no-auth
   VROUTER_GATEWAY: {{ contrail_gateway }}
@@ -37,7 +37,7 @@ contrail_configuration:
   KEYSTONE_AUTH_PUBLIC_PORT: 80
   RABBITMQ_NODE_PORT: 5673
   UPDATE_IMAGES: true
-  UPGRADE_KERNEL: true
+  UPGRADE_KERNEL: false
   CONTROLLER_NODES: {{ contrail_ip }}
   CONTROL_NODES: {{ contrail_ip }}
   WEBUI_NODES: {{ contrail_ip }}

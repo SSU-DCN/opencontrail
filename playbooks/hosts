@@ -1,8 +1,9 @@
-controller ansible_host=openstack-node ansible_user=centos
+controller ansible_host= ansible_user=centos
 
 # This host should be one from the compute host group.
 # Playbooks are not prepared to deploy tungsten fabric compute node separately.
-contrail_controller ansible_host=contrail-node ansible_user=centos
+contrail_controller ansible_host= ansible_user=centos local_ip=
 
 [compute]
-contrail-node ansible_user=centos
+contrail_controller
+#other_compute ansible_host= ansible_user= local_ip=

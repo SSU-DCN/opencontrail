@@ -2,14 +2,14 @@
 - name: Install required utilities
   become: yes
   yum:
-    name: 
+    name:
       - python-devel
       - epel-release
       - gcc
       - git
       - ansible-2.4.*
       - yum-utils
-    state: present      
+    state: present
 
 - name: Install pip
   become: yes
@@ -75,11 +75,7 @@
     force: yes
     dest: ~/contrail-ansible-deployer
     repo: https://github.com/Juniper/contrail-ansible-deployer.git
-
-- name: Checkout 'contrail-ansible-deployer' repository
-  shell: |
-    cd ~/contrail-ansible-deployer
-    git checkout 38a0b84ec7a5f4c2a1b8b8c9c36b007dc8477b1f
+    version: 38a0b84ec7a5f4c2a1b8b8c9c36b007dc8477b1f
 
 - name: Update hosts file
   template:

@@ -20,7 +20,7 @@ global_configuration:
   CONTAINER_REGISTRY: opencontrailnightly
 
 contrail_configuration:
-  CONTRAIL_VERSION: latest
+  CONTRAIL_VERSION: master-latest
   LOG_LEVEL: SYS_DEBUG
   CLOUD_ORCHESTRATOR: none
   DEFAULT_LOCAL_IP: "{{hostvars['controller'].ansible_default_ipv4.address}}"

@@ -35,12 +35,17 @@ class TestCase(base.BaseTestCase):
 class IntegrationTestCase(base.BaseTestCase):
     """Base test case for all integration tests."""
 
+    @classmethod
+    def setUpClass(cls):
+        super(IntegrationTestCase, cls).setUpClass()
+        cls.controller_ip = os.getenv('CONTROLLER_IP', 'localhost')
+        cls.contrail_ip = os.getenv('CONTRAIL_IP', cls.controller_ip)
+
+        cls.contrail_api = 'http://{}:8082'.format(cls.contrail_ip)
+        cls.auth_url = 'http://{}/identity/v3'.format(cls.controller_ip)
+
     def setUp(self):
         super(IntegrationTestCase, self).setUp()
-        controller_ip = os.getenv('CONTROLLER_IP', 'localhost')
-
-        self.contrail_api = 'http://{}:8082'.format(controller_ip)
-        self.auth_url = 'http://{}/identity/v3'.format(controller_ip)
 
         auth = identity.V3Password(auth_url=self.auth_url,
                                    username='admin', password='admin',
@@ -76,6 +81,14 @@ class IntegrationTestCase(base.BaseTestCase):
         ret = response.json()
         self.assertIsNotNone(ret.get(resource_name))
         return ret.get(resource_name)
+
+    def tf_list_resource(self, resource_name):
+        list_name = "{}s".format(resource_name)
+        response = requests.get('{}/{}'.format(self.contrail_api, list_name))
+        self.assertIn(response.status_code, {200, 301, 302, 303, 304})
+        ret = response.json()
+        self.assertIsNotNone(ret.get(list_name))
+        return ret.get(list_name)
 
     def tf_delete_resource(self, resource, id):
         return requests.delete(

@@ -169,7 +169,8 @@ class OpenContrailMechDriver(api.MechanismDriver):
         try:
             self.drv.delete_port(context._plugin_context, port['id'])
             if self.dm_integrator.enabled:
-                self.dm_integrator.delete_vlan_tagging_for_port(port)
+                self.dm_integrator.delete_vlan_tagging_for_port(
+                    context._plugin_context, port)
         except Exception:
             LOG.exception("Delete Port Failed")
 

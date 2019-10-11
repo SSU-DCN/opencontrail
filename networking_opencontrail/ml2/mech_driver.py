@@ -19,6 +19,7 @@ import networking_opencontrail.drivers.drv_opencontrail as drv
 from neutron_lib.plugins.ml2 import api
 
 from networking_opencontrail.dm import dm_integrator
+from networking_opencontrail.drivers.vnc_api_driver import VncApiClient
 from networking_opencontrail.l3 import snat_synchronizer
 from networking_opencontrail.ml2 import opencontrail_sg_callback
 from networking_opencontrail.ml2 import subnet_dns_integrator
@@ -49,6 +50,7 @@ class OpenContrailMechDriver(api.MechanismDriver):
             subnet_dns_integrator.SubnetDNSCompatibilityIntegrator(self.drv))
         self.dm_integrator = dm_integrator.DeviceManagerIntegrator()
         self.dm_integrator.initialize()
+        self.tf_client = VncApiClient()
         LOG.info("Initialization of networking-opencontrail plugin: COMPLETE")
 
     def create_network_precommit(self, context):
@@ -177,6 +179,14 @@ class OpenContrailMechDriver(api.MechanismDriver):
     def bind_port(self, context):
         """Bind port in OpenContrail."""
         try:
+            fq_name = [
+                self.tf_client.DEFAULT_GLOBAL_CONF,
+                context._port['binding:host_id']]
+            node = self.tf_client.get_virtual_router(fq_name=fq_name)
+
+            if node is None:
+                return
+
             self.drv.bind_port(context)
         except Exception:
             LOG.exception("Bind Port Failed")

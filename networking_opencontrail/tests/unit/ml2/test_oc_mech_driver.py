@@ -18,6 +18,7 @@ import mock
 
 from neutron.tests.unit import testlib_api
 
+from networking_opencontrail.drivers.vnc_api_driver import VncApiClient
 from networking_opencontrail.ml2 import mech_driver
 
 
@@ -37,6 +38,7 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
         self.drv = mech_driver.OpenContrailMechDriver()
         self.drv.initialize()
         self.drv.dm_integrator = mock.MagicMock(enabled=False)
+        self.drv.tf_client = mock.MagicMock()
 
     def tearDown(self):
         super(OpenContrailTestCases, self).tearDown()
@@ -326,6 +328,43 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
         self.drv.update_port_postcommit(port_context)
 
         mech_driver.drv.OpenContrailDrivers().update_port.assert_not_called()
+
+    def test_bind_port_looks_up_correct_name(self):
+        context = mock.Mock()
+        context._port = {"binding:host_id": "asd"}
+
+        def check_name(name):
+            assert len(name) == 2
+            assert name[0] == VncApiClient.DEFAULT_GLOBAL_CONF
+            assert name[1] == context["binding:host_id"]
+
+            return None
+
+        self.drv.tf_client.get_virtual_router.side_effect = check_name
+        self.drv.bind_port(context)
+
+    def test_bind_port_ommits_port_when_not_in_tf(self):
+        context = mock.Mock()
+        context._port = {"binding:host_id": "asd"}
+
+        self.drv.tf_client.get_virtual_router.return_value = None
+        self.drv.drv.bind_port.side_effect = AssertionError(
+            "Function should not be called")
+
+        self.drv.bind_port(context)
+
+    def test_bind_port_actually_binds(self):
+        context = mock.Mock()
+        context._port = {"binding:host_id": "asd"}
+
+        def check_context(ctx):
+            assert ctx == context
+
+        self.drv.drv.bind_port.side_effect = check_context
+
+        self.drv.bind_port(context)
+
+        assert self.drv.drv.bind_port.called
 
     def test_create_security_group(self):
         ctx = fake_plugin_context('ten-1')

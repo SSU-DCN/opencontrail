@@ -107,6 +107,10 @@ class VncApiClient(object):
         return self._get_object("virtual_port_group",
                                 uuid=uuid, fq_name=fq_name)
 
+    def get_virtual_router(self, uuid=None, fq_name=None):
+        return self._get_object("virtual_router",
+                                uuid=uuid, fq_name=fq_name)
+
     @vnc_connect
     def create_virtual_machine_interface(self, vmi):
         try:

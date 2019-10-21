@@ -1,4 +1,3 @@
 [DEFAULT]
 core_plugin = ml2
 service_plugins = opencontrail-router
-network_scheduler_driver = networking_opencontrail.agents.dhcp_scheduler.TFIgnoreDHCPScheduler

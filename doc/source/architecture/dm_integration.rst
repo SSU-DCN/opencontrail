@@ -6,10 +6,11 @@ Plugin can trigger Device Manager to automatically manage underlay: VLAN tags on
 switch interfaces and VXLAN. Using this, compute hosts can be dynamically
 connected to VLANs used by virtual machines that run on them.
 
-Networking-opencontrail triggers DM by creating a *virtual
-machine interface* in Tungsten Fabric for each affected VM, that contains references
-to the right virtual network, expected VLAN tag and bindings for physical interfaces, that
-need to be configured. Any other actions, like pushing configuration, is done
+Networking-opencontrail triggers DM by creating a *virtual machine interface*
+in Tungsten Fabric for each affected VM, that contains references
+to the bindings for physical interfaces that need to be configured.
+A single VMI is created on every for each network that has at least on VM connected it.
+Any other actions, like pushing configuration, is done
 by Tungsten Fabric/Device Manager.
 
 Prerequisites in TF
@@ -47,16 +48,18 @@ if path to it was given.
 
 Then, plugin calls methods for integration during ``update_port_postcommit``
 in ML2 framework. First, if the compute host, network or VM id has changed,
-plugin tries to delete old DM-related VMI. Next it checks if current
-port is connected to a VM on a host that exists in the topology (in topology file or
-when file is not given, in TF API) and a VLAN virtual network.
+plugin checks if it is safe to delete old DM-related VMI. Check includes
+checking if any other VM on this compute host is connected to the network
+assigned to this VMI. If none is found VMI is deleted.
+Next it checks if current port is connected to a VM on a host that exists in the
+topology (in topology file or when file is not given, in TF API) and a VLAN virtual network.
 
 When DM should be informed about this VM, plugin checks if related VMI not
 exists yet. If not, creates a new VMI in TF that has:
 
 * reference to virtual network (created previous by networking-opencontrail),
 * ``sub_interface_vlan_tag`` property with VLAN tag value,
-* name created from template ``_vlan_tag_for_vm_<vm-uuid>_vn_<vn-uuid>``,
+* name created from template ``_vlan_tag_for_vn_<vn-uuid>_compute_<compute_id>``,
 * ``profile bindings`` dictionary that contains list of affected switches,
   their interfaces, fabric name and VPG name (if VPG object exists).
 
@@ -66,7 +69,7 @@ which is connected to this compute. If it does not exist, VPG name will not be l
 and it should be created automatically by TF.
 
 On ``delete_port_postcommit`` in ML2 framework, plugin deletes DM-related
-VMI if it exists.
+VMI if it exists and no VM on the compute is connected to the network it references.
 
 .. note::
 

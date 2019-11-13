@@ -331,6 +331,8 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
     def test_bind_port_looks_up_correct_name(self):
         context = mock.Mock()
         context._port = {"binding:host_id": "asd"}
+        context.current = {"id": "asd"}
+        context.network.current = {"id": "asd"}
 
         self.drv.bind_port(context)
         self.drv.tf_client.get_virtual_router.assert_called_with(
@@ -341,6 +343,8 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
     def test_bind_port_ommits_port_when_not_in_tf(self):
         context = mock.Mock()
         context._port = {"binding:host_id": "asd"}
+        context.current = {"id": "asd"}
+        context.network.current = {"id": "asd"}
 
         self.drv.tf_client.get_virtual_router.return_value = None
 
@@ -351,6 +355,8 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
     def test_bind_port_actually_binds(self):
         context = mock.Mock()
         context._port = {"binding:host_id": "asd"}
+        context.current = {"id": "asd"}
+        context.network.current = {"id": "asd"}
 
         self.drv.bind_port(context)
 

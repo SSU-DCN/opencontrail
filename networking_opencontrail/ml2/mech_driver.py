@@ -179,12 +179,22 @@ class OpenContrailMechDriver(api.MechanismDriver):
     def bind_port(self, context):
         """Bind port in OpenContrail."""
         try:
+            LOG.debug(
+                "Attempting to bind port {port} on "
+                "network {network}".format(
+                    port=context.current['id'],
+                    network=context.network.current['id']))
+
+            host_id = context._port['binding:host_id']
             fq_name = [
                 self.tf_client.DEFAULT_GLOBAL_CONF,
-                context._port['binding:host_id']]
-            node = self.tf_client.get_virtual_router(fq_name=fq_name)
+                host_id]
+            vrouter = self.tf_client.get_virtual_router(fq_name=fq_name)
 
-            if node is None:
+            if vrouter is None:
+                LOG.debug(
+                    "Refusing to bind port for {host}. "
+                    "Not managed by TF.".format(host=host_id))
                 return
 
             self.drv.bind_port(context)

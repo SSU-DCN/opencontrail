@@ -36,10 +36,6 @@
     tenant_network_types = local,vlan
     mechanism_drivers = opencontrail
 
-    [[post-config|$NEUTRON_CONF]]
-    [DEFAULT]
-    network_scheduler_driver = networking_opencontrail.agents.dhcp_scheduler.TFIgnoreDHCPScheduler
-
 #. If you want to enable integration with Device Manager and set path to
    topology file, set additional variables like::
 

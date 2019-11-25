@@ -6,15 +6,20 @@
       name: httpd
       state: restarted
       enabled: yes
+
 - name: Get contrail config api docker name
   become: yes
-  register: contrail_config_api_docker_name
   shell: |
       docker ps --filter "label=net.juniper.contrail.container.name=contrail-controller-config-api" --format {{' "{{.Names}}" '}}
+  register: contrail_config_api_docker_name
+  changed_when: false
+  check_mode: no
+
 - name: Restart contrail config api
   become: yes
   shell: |
       docker restart "{{ contrail_config_api_docker_name.stdout }}"
+
 - name: Wait for Contrail API to come up
   uri:
     url: "http://{{ contrail_ip }}:8082/projects"
@@ -26,9 +31,13 @@
   until: result.status == 200 or result.status == 304
   retries: 30
   delay: 5
+  changed_when: false
+  when: not ansible_check_mode
+
 - name: Synchronize projects
   script: sync_projects.py {{ openstack_ip }} {{ contrail_ip }}
   register: sync_result
+
 - name: Print project synchronization status
   debug:
     var: sync_result.stdout_lines

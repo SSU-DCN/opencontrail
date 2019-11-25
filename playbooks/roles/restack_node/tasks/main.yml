@@ -1,4 +1,18 @@
 ---
+- name: Install pip
+  become: yes
+  yum:
+    name: python-pip
+    state: present
+
+- name: Update python dependencies
+  become: yes
+  pip:
+    name:
+      - setuptools
+      - requests
+    state: forcereinstall
+
 - name: optionally unstack
   shell: PATH="/usr/sbin:$PATH" ./unstack.sh
   args:

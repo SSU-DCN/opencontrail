@@ -15,7 +15,21 @@ instances:
       config:
       control:
       webui:
+{% if "contrail_controller" in groups["contrail"] %}
       vrouter:
+{% endif %}
+
+{% for host in groups['contrail'] %}
+{% if host != "contrail_controller" %}
+{% filter indent(width=2) %}
+  {{ 'bms' + loop.index|string }}:
+  provider: bms
+  ip: {{ hostvars[host]['local_ip'] }}
+  roles:
+    vrouter:
+{% endfilter %}
+{% endif %}
+{% endfor %}
 
 global_configuration:
   CONTAINER_REGISTRY: opencontrailnightly

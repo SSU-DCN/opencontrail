@@ -1,0 +1,13 @@
+---
+- name: Update kernel
+  become: yes
+  yum:
+    name: kernel
+    state: latest
+  register: update_kernel
+
+- name: Reboot the machine
+  become: yes
+  reboot:
+  when: update_kernel.changed
+  register: reboot_machine

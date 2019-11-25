@@ -1,0 +1,12 @@
+diff --git a/playbooks/roles/instance/tasks/RedHat.yml b/playbooks/roles/instance/tasks/RedHat.yml
+index 6fb9dbd..797e21b 100644
+--- a/playbooks/roles/instance/tasks/RedHat.yml
++++ b/playbooks/roles/instance/tasks/RedHat.yml
+@@ -40,5 +40,4 @@
+     - name: Install pip
+-      easy_install:
+-        name: pip
+-        state: latest
++      shell: |
++        easy_install pip
+   when:

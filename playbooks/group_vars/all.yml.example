@@ -8,15 +8,17 @@ contrail_gateway:
 # Interface name for OpenConrail (e.g. eth0)
 contrail_interface:
 
-
 # IP address for OpenStack VM (e.g. 192.168.0.3)
 openstack_ip:
 
 # OpenStack branch used on VMs.
-openstack_branch: master
+openstack_branch: stable/train
+
+# Optionally use different plugin version (defaults to value of OpenStack branch)
+networking_plugin_version: master
 
 # Tungsten Fabric docker image tag for contrail-ansible-deployer
-contrail_version: latest
+contrail_version: master-latest
 
 # If true, then install networking_bgpvpn plugin with contrail driver
 install_networking_bgpvpn_plugin: false
@@ -32,9 +34,7 @@ dm_topology_file:
 # If true, password to the created instances for current ansible user
 # will be set to value of instance_password
 change_password: false
-instance_password: uberpass1
+# instance_password: uberpass1
 
-# Set to true if you have conflict between docker network subnet and your local
-# network subnet. The docker bridge CIDR will be set to value of bip_cidr
-fix_docker_bip: false
-bip_cidr: 10.255.0.1/16
+# If set, override docker deamon /etc config file with this data
+# docker_config:

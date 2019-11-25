@@ -1,25 +1,47 @@
 #!/usr/bin/env ansible-playbook
+- hosts: all
+  roles:
+  - node
+
+- hosts: contrail
+  roles:
+  - docker
 
 - hosts: controller
   roles:
-    - devstack_node
-    - config_controller_node
-    - restack_node
+  - devstack_node
+  - config_controller_node
+  - restack_node
+  tags:
+  - os_controller
 
 - hosts: contrail_controller
   roles:
-    - contrail_node
+  - contrail_node
+  tags:
+  - contrail
+  - contrail_deploy
+
+- hosts: contrail_controller:contrail
+  roles:
+  - vrouter_node
+  tags:
+  - contrail
 
 - hosts: controller
   roles:
-    - { role: networking_bgpvpn_plugin, when: install_networking_bgpvpn_plugin }
-    - { role: restack_node, when: install_networking_bgpvpn_plugin }
+  - { role: networking_bgpvpn_plugin, when: install_networking_bgpvpn_plugin }
+  - { role: restack_node, when: install_networking_bgpvpn_plugin }
+  tags:
+  - bgpvpn
 
 - hosts: compute
   roles:
-  - role: devstack_node
-  - role: config_compute_node
-  - role: restack_node
+  - devstack_node
+  - config_compute_node
+  - restack_node
+  tags:
+  - os_computes
 
 - hosts: controller
   roles:

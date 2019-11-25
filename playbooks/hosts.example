@@ -4,6 +4,13 @@ controller ansible_host= ansible_user=centos
 # Playbooks are not prepared to deploy tungsten fabric compute node separately.
 contrail_controller ansible_host= ansible_user=centos local_ip=
 
-[compute]
+[contrail]
 contrail_controller
-#other_compute ansible_host= ansible_user= local_ip=
+other_contrail ansible_host= local_ip= ansible_user=centos
+
+[openvswitch]
+other_compute ansible_host= local_ip= ansible_user=centos
+
+[compute:children]
+contrail
+openvswitch

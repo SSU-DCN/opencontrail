@@ -1,3 +1,108 @@
 ---
-- include_tasks: update_kernel.yml
-- include_tasks: contrail.yml
+- name: Install required utilities
+  become: yes
+  yum:
+    name:
+      - python-devel
+      - epel-release
+      - gcc
+      - git
+      - ansible-2.4.*
+      - yum-utils
+      - libffi-devel
+    state: present
+
+# Dirty ugly workaround on contrail-ansible-deployer not using 'become' in playbooks
+- name: Create directories for contrail
+  shell: |
+    set -e
+    set -x
+    sudo mkdir -p /var/log/contrail
+    sudo mkdir -p /etc/contrail
+    sudo chmod 777 /var/log/contrail /etc/contrail
+
+# Contrail Ansible Deployer
+- name: Create ssh key and add to authorized_key for centos user
+  shell: |
+    set -e
+    set -x
+    yes | ssh-keygen -t rsa -N '' -f ~/.ssh/centos_rsa
+    cat ~/.ssh/centos_rsa.pub | tee --append ~/.ssh/authorized_keys
+    chmod 700 ~/.ssh
+    chmod 600 ~/.ssh/centos_rsa ~/.ssh/authorized_keys
+
+- name: Clone 'contrail-ansible-deployer' repository
+  git:
+    clone: yes
+    force: yes
+    dest: ~/contrail-ansible-deployer
+    repo: https://github.com/Juniper/contrail-ansible-deployer.git
+    version: master
+
+- name: Update hosts file
+  template:
+    src: hosts.j2
+    dest: ~/contrail-ansible-deployer/inventory/hosts
+
+- name: Update instances.yaml file
+  template:
+    src: instances.yaml.j2
+    dest: ~/contrail-ansible-deployer/config/instances.yaml
+
+- name: Copy patch for workaround
+  copy:
+    src: fix_easy_install.patch
+    dest: ~/contrail-ansible-deployer/
+
+- name: Fix easy_install in contrail ansible deployer (workaround)
+  shell: |
+    git apply fix_easy_install.patch
+  args:
+    chdir: ~/contrail-ansible-deployer/
+    executable: /bin/bash
+
+- name: Generate ssh key for provisioning other nodes
+  openssh_keypair:
+    path: ~/.ssh/id_rsa
+    state: present
+  register: contrail_deployer_ssh_key
+
+- name: Propagate generated key
+  authorized_key:
+    user: "{{ ansible_user }}"
+    state: present
+    key: "{{ contrail_deployer_ssh_key.public_key }}"
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups.contrail }}"
+  when: contrail_deployer_ssh_key.public_key
+
+- name: Provision Node before deploy contrail
+  shell: |
+    set -e
+    set -x
+    export ANSIBLE_HOST_KEY_CHECKING=False
+    cd ~/contrail-ansible-deployer/
+    ansible-playbook -vv \
+                     -e skip_openstack=true \
+                     -e config_file=~/contrail-ansible-deployer/config/instances.yaml \
+                     -i inventory/ playbooks/configure_instances.yml
+
+- name: Deploy OpenContrail
+  shell: |
+    set -e
+    set -x
+    export ANSIBLE_HOST_KEY_CHECKING=False
+    cd ~/contrail-ansible-deployer/
+    ansible-playbook -vv \
+                     -e skip_openstack=true \
+                     -e config_file=~/contrail-ansible-deployer/config/instances.yaml \
+                     -e '{"CREATE_CONTAINERS":true}' \
+                     -e orchestrator=none \
+                     -i inventory/ playbooks/install_contrail.yml
+
+- name: Wait for contrail until fully running
+  wait_for:
+    sleep: 5
+    host: "{{ contrail_ip }}"
+    port: 8082
+    timeout: 300

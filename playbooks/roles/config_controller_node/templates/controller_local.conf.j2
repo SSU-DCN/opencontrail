@@ -13,6 +13,8 @@ DATABASE_PASSWORD=$ADMIN_PASSWORD
 RABBIT_PASSWORD=$ADMIN_PASSWORD
 SERVICE_PASSWORD=$ADMIN_PASSWORD
 
+DATABASE_HOST={{ openstack_ip }}
+
 USE_BRANCH={{ openstack_branch }}
 
 NOVA_BRANCH=$USE_BRANCH
@@ -42,7 +44,7 @@ OPENCONTRAIL_DM_TOPOLOGY={{ dm_topology_file }}
 
 NOVNCPROXY_URL="http://{{ hostvars['controller'].ansible_host }}:6080/vnc_lite.html"
 
-enable_plugin networking-opencontrail https://git.openstack.org/openstack/networking-opencontrail $USE_BRANCH
+enable_plugin networking-opencontrail https://git.openstack.org/openstack/networking-opencontrail {{ networking_plugin_version }}
 
 PHYSICAL_NETWORK=vhost
 TENANT_VLAN_RANGE=1:4094

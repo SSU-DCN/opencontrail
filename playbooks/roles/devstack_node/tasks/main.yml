@@ -8,16 +8,20 @@
       - python
       - epel-release
     state: present
-    
+
 - name: Install pip
   become: yes
   yum:
     name: python-pip
     state: present
 
-- name: Update setuptools
+- name: Update python dependencies
   become: yes
-  shell: pip install --upgrade setuptools
+  pip:
+    name:
+      - setuptools
+      - requests
+    state: forcereinstall
 
 - name: Fetch devstack
   git:

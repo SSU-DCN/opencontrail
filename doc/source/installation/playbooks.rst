@@ -82,15 +82,25 @@ it's internal IP address.
     # Playbooks are not prepared to deploy tungsten fabric compute node separately.
     contrail_controller ansible_host=10.100.0.2 ansible_user=centos
 
-    [compute]
+    [contrail]
     contrail_controller local_ip=192.168.0.2
     compute ansible_host=10.100.0.4 ansible_user=centos local_ip=192.168.0.4
+
+    [openvswitch]
+
+    [compute:children]
+    contrail
+    openvswitch
 
 The ``controller`` host is a machine to install OpenStack controller.
 On ``contrail_controller``, the OpenConrail will be installed. All hosts
 from the ``compute`` group will be a OpenStack computes.
 Each compute is required to define ``local_ip`` variable with it's intenal ip
-address.
+address. You may define additional nodes managed by OpenvSwitch by appending
+them to openvswitch group, in the same format as contrail ones.
+
+Removing ``contrail_controller`` from contrail group will result in not using it
+as a compute, and not installing vRouter on it.
 
 **2. Change deployment variables in playbooks/group_vars/all.yml**
 
@@ -98,7 +108,8 @@ address.
 * ``contrail_gateway`` should be gateway address of the contrail_ip.
 * ``contrail_interface`` should be interface name that has bound contrail ip.
 
-* ``openstack_branch`` should be set to ``master``
+* ``openstack_branch`` should be set to ``master`` or specific openstack branch
+  (for instance ``stable/train``)
 * ``install_networking_bgpvpn_plugin`` is a boolean value. If set true, it will
   install the neutron_bgpvpn plugin.
 
@@ -116,9 +127,8 @@ Last variables provide some useful options to configure VMs:
 * ``change_password`` is a boolean value. If set true, the password on
   every machine (for user used by ansible) will be set to password given
   in ``instance_password`` variable.
-* ``fix_docker_bip`` is a boolean value. If set true, the docker bridge CIDR
-  will be set to value given in ``bip_cidr`` variable. This is for case, when
-  default Docker bip can conflict with others.
+* ``docker_config`` is an optional object. If set, the global docker config file
+  will be set to the value in variable.
 
 .. code-block:: yaml
 
@@ -131,12 +141,17 @@ Last variables provide some useful options to configure VMs:
     # Interface name for OpenConrail.
     contrail_interface: eth0
 
-
     # IP address for OpenStack VM.
     openstack_ip: 192.168.0.3
 
     # OpenStack branch used on VMs.
     openstack_branch: master
+
+    # Optionally use different plugin version (defaults to value of OpenStack branch)
+    networking_plugin_version: master
+
+    # Tungsten Fabric docker image tag for contrail-ansible-deployer
+    contrail_version: master-latest
 
     # If true, then install networking_bgpvpn plugin with contrail driver
     install_networking_bgpvpn_plugin: false
@@ -154,10 +169,9 @@ Last variables provide some useful options to configure VMs:
     change_password: false
     instance_password: uberpass1
 
-    # Set to true if you have conflict between docker network subnet and your local
-    # network subnet. The docker bridge CIDR will be set to value of bip_cidr
-    fix_docker_bip: false
-    bip_cidr: 10.255.0.1/16
+    # If set, override docker deamon /etc config file with this data
+    docker_config:
+        bip: 10.255.0.1/16
 
 **********
 Deployment

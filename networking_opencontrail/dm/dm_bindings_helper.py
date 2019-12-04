@@ -36,7 +36,7 @@ class DmBindingsHelper(object):
         self.tf_client = tf_client
         topology_file = cfg.CONF.DM_INTEGRATION.topology
         if topology_file:
-            self.topology = DmTopologyFile(self.tf_client)
+            self.topology = DmTopologyFile(topology_file)
         else:
             self.topology = DmTopologyApi(self.tf_client)
 

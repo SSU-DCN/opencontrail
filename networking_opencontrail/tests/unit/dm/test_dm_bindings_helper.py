@@ -17,6 +17,8 @@ import json
 import ddt
 import mock
 
+from oslo_config import cfg
+
 from networking_opencontrail.dm.dm_bindings_helper import DmBindingsHelper
 from networking_opencontrail.dm.dm_bindings_helper import FabricNotFoundError
 from networking_opencontrail.dm.dm_bindings_helper import \
@@ -46,7 +48,7 @@ class DmBindingsHelperTestCase(base.TestCase):
 
         helper.initialize()
 
-        topology.assert_called_with(self.tf_client)
+        topology.assert_called_with(cfg.CONF.DM_INTEGRATION.topology)
         topology().initialize.assert_called()
 
     def test_check_host_managed_true_when_dm_topology_true(self):

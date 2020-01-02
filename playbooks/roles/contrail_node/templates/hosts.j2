@@ -1,6 +1,6 @@
 container_hosts:
   hosts:
-  {% for host in groups['contrail'] %}
+{% for host in groups['contrail'] %}
     {{hostvars[host]['local_ip']}}:
       ansible_user: {{hostvars[host]['ansible_user']}}
-  {% endfor %}
+{% endfor %}

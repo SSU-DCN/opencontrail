@@ -65,3 +65,17 @@ class TestManageNetwork(IntegrationTestCase):
         self.assertIsNotNone(tf_net.get('provider_properties'))
         self.assertDictEqual(tf_net['provider_properties'],
                              expected_provider_props)
+
+    def test_delete_network_vlan(self):
+        net = {
+            'name': 'test_vlan_network',
+            'provider:network_type': 'vlan',
+            'provider:physical_network': 'public',
+            'admin_state_up': True,
+        }
+        q_net = self.q_create_network(**net)
+        network_id = q_net['network']['id']
+        self.q_delete_network(q_net)
+
+        response = self.tf_request_resource('virtual-network', network_id)
+        self.assertEqual(response.status_code, 404)

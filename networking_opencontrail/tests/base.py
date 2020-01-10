@@ -168,6 +168,9 @@ class IntegrationTestCase(base.BaseTestCase):
         subnet_body['subnet'].update(kwargs)
         return self.q_update_resource(subnet['subnet'], subnet_body)
 
+    def q_delete_network(self, network):
+        self.q_delete_resource(network['network'])
+
     def q_delete_subnet(self, subnet):
         self.q_delete_resource(subnet['subnet'])
 

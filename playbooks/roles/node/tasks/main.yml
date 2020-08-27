@@ -1,10 +1,11 @@
 ---
-- name: Update kernel
+- name: Update all apt repo and cache
   become: yes
-  yum:
-    name: kernel
-    state: latest
+  apt: update_cache=yes force_apt_get=yes
   register: update_kernel
+
+- name: Upgrade all apt packages
+  apt: upgrade=dist force_apt_get=yes
 
 - name: Reboot the machine
   become: yes

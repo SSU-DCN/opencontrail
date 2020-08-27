@@ -3,23 +3,16 @@
     - run-devstack
     - run-contrail
   tasks:
-    - name: Install ius-release
-      become: yes
-      yum:
-        name: https://centos7.iuscommunity.org/ius-release.rpm
-        state: present
-        update_cache: yes
-
     - name: Install Python3.6
       become: yes
-      yum:
+      apt:
         name: "{{ item }}"
         state: present
       with_items:
-        - python36u
-        - python36u-devel
-        - python36u-pip
-        - python36u-setuptools
+        - python3.6
+        - python3.6-dev
+        - python3-pip
+        - python3-setuptools
 
     - name: Create symlink on Python3
       # Python36 installation don't create Python3 symlink which is used by tox.

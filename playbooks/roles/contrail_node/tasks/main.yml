@@ -1,15 +1,14 @@
 ---
 - name: Install required utilities
   become: yes
-  yum:
+  apt:
     name:
-      - python-devel
-      - epel-release
+      - python3-dev
       - gcc
       - git
-      - ansible-2.4.*
-      - yum-utils
-      - libffi-devel
+      - apt-utils
+      - ansible
+      - libffi-dev
     state: present
 
 # Dirty ugly workaround on contrail-ansible-deployer not using 'become' in playbooks
@@ -26,17 +25,17 @@
   shell: |
     set -e
     set -x
-    yes | ssh-keygen -t rsa -N '' -f ~/.ssh/centos_rsa
-    cat ~/.ssh/centos_rsa.pub | tee --append ~/.ssh/authorized_keys
+    yes | ssh-keygen -t rsa -N '' -f ~/.ssh/ubuntu_rsa
+    cat ~/.ssh/ubuntu_rsa.pub | tee --append ~/.ssh/authorized_keys
     chmod 700 ~/.ssh
-    chmod 600 ~/.ssh/centos_rsa ~/.ssh/authorized_keys
+    chmod 600 ~/.ssh/ubuntu_rsa ~/.ssh/authorized_keys
 
 - name: Clone 'contrail-ansible-deployer' repository
   git:
     clone: yes
     force: yes
     dest: ~/contrail-ansible-deployer
-    repo: https://github.com/Juniper/contrail-ansible-deployer.git
+    repo: https://github.com/tungstenfabric/tf-ansible-deployer.git
     version: master
 
 - name: Update hosts file

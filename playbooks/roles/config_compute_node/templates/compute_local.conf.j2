@@ -8,7 +8,7 @@ MULTI_HOST=1
 LOGFILE=$DEST/logs/stack.sh.log
 LOGDAYS=1
 
-ADMIN_PASSWORD=admin
+ADMIN_PASSWORD={{ openstack_pw }}
 DATABASE_PASSWORD=$ADMIN_PASSWORD
 RABBIT_PASSWORD=$ADMIN_PASSWORD
 SERVICE_PASSWORD=$ADMIN_PASSWORD
@@ -34,3 +34,10 @@ VNCSERVER_PROXYCLIENT_ADDRESS=$VNCSERVER_LISTEN
 
 LOG_COLOR=True
 USE_SCREEN=True
+
+[[post-config|/etc/nova/nova.conf]]
+[database]
+connection = mysql+pymysql://root:root@$SERVICE_HOST/nova_cell0?charset=utf8
+
+[api_database]
+connection = mysql+pymysql://root:root@$SERVICE_HOST/nova_api?charset=utf8

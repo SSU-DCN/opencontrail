@@ -1,31 +1,31 @@
 ---
 - name: Install required utilities
   become: yes
-  yum:
+  apt:
     name:
       - lvm2
       - git
-      - python
+      - python3.6
       - epel-release
     state: present
 
 - name: Install pip
   become: yes
-  yum:
-    name: python-pip
+  apt:
+    name: python3-pip
     state: present
 
 - name: Update python dependencies
   become: yes
   pip:
     name:
-      - setuptools==43.0.0
+      - setuptools
       - requests
     state: forcereinstall
 
 - name: Fetch devstack
   git:
-    repo: "https://github.com/openstack-dev/devstack.git"
+    repo: "https://opendev.org/openstack/devstack.git"
     dest: ~/devstack
     version: "{{ openstack_branch }}"
     accept_hostkey: yes

@@ -16,18 +16,18 @@
   become: yes
   pip:
     name:
-      - openstacksdk==0.36.0
-      - docker-compose==1.9.0
-      - dogpile.cache==0.7.1
-      - pyasn1-modules==0.2.6
-      - networkx==2.2
-      - requests==2.22
-      - decorator==4.4.0
-      - PyYAML==3.10
-      - ipaddress==1.0.16
-      - numpy==1.16.5 # Required as long as we use Python 2: newer versions broken Python 2 support
+      - openstacksdk
+      - docker-compose
+      - dogpile.cache
+      - pyasn1-modules
+      - networkx
+      - requests
+      - decorator
+      - PyYAML
+      - ipaddress
+      - numpy
       - git+https://github.com/Juniper/contrail-controller.git#subdirectory=src/vnsw/contrail-vrouter-api/
-      - git+https://github.com/Juniper/contrail-nova-vif-driver.git
+      - git+https://github.com/tungstenfabric/tf-nova-vif-driver.git
   retries: 3
   delay: 3
   register: result

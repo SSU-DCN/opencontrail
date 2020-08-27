@@ -1,20 +1,24 @@
 - name: Install required utilities
   become: yes
-  yum:
+  apt:
     name:
-      - python-devel
-      - epel-release
+      - python3-devel
       - gcc
       - git
-      - ansible-2.4.*
-      - yum-utils
-      - libffi-devel
+      - ansible
+      - apt-utils
+      - libffi-dev
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg-agent
+      - software-properties-common
     state: present
 
 - name: Install pip
   become: yes
   yum:
-    name: python-pip
+    name: python3-pip
     state: present
 
 - name: Create directory for docker config
@@ -31,16 +35,25 @@
     dest: /etc/docker/daemon.json
   when: docker_config is defined and docker_config
 
+- name: Add Docker key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Add Docker Repository
+  apt_repository:
+    repo: deb https://download.docker.com/linux/ubuntu bionic stable
+    state: present
+
 - name: Add docker-ce repository
   become: yes
   shell: |
-    yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 
 - name: Install docker
   become: yes
-  yum:
-    name: docker-ce
-    state: present
+  apt: name={{ item }} state=latest update_cache=yes
+  loop: [ 'docker-ce', 'docker-ce-cli', 'containerd.io' ]
 
 - name: Start docker daemon
   become: yes
@@ -52,14 +65,14 @@
 - name: Add user to docker group
   become: yes
   user:
-    name: centos
+    name: ubuntu
     groups: docker
     append: yes
 
 - name: install docker and docker-compose for python
   pip:
     name:
-      - docker-py==1.10.6
-      - docker-compose==1.9.0
+      - docker-py
+      - docker-compose
     state: present
     extra_args: --user

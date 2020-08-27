@@ -3,14 +3,14 @@
   become: yes
   apt:
     name:
-      - python-pip
+      - python3-pip
     state: present
 
 - name: Update local.conf with enabling plugin
   lineinfile:
     path: ~/devstack/local.conf
     regexp: '^enable_plugin networking-bgpvpn'
-    line: 'enable_plugin networking-bgpvpn https://git.openstack.org/openstack/networking-bgpvpn.git stable/ocata'
+    line: 'enable_plugin networking-bgpvpn https://opendev.org/openstack/networking-bgpvpn.git'
     insertafter: 'enable_plugin'
 
 - name: Update local.conf with driver
@@ -31,7 +31,7 @@
 
 - name: Fetch git repository
   git:
-    repo: "https://git.openstack.org/openstack/networking-bgpvpn.git"
+    repo: "https://opendev.org/openstack/networking-bgpvpn.git"
     dest: /opt/stack/networking-bgpvpn
     version: "{{ openstack_branch }}"
     accept_hostkey: yes
@@ -69,5 +69,5 @@
     name:
       - '/tmp/cfgm_common-0.1.dev0.tar.gz'
       - '/tmp/vnc_api-5.0.0.tar.gz'
-      - 'git+git://github.com/Juniper/contrail-neutron-plugin.git#egg=neutron_plugin_contrail'
+      - 'git+git://github.com/tungstenfabric/tf-neutron-plugin#egg=neutron_plugin_contrail'
   become: yes
